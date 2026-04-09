@@ -4,3 +4,4 @@ projects/
 logs/
 *.log
 .DS_Store
+PROJECT-STATUS.md

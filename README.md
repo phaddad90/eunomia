@@ -25,7 +25,7 @@ Eunomia flips it. Agents are employees, not contractors:
 
 - **CEO persists.** One long-running session with auto-compaction. Context lives in files (SOUL.md, GOALS.md, MEMORY.md), not in bloated conversation history.
 - **Workers are disposable.** Spawned for one task, scoped to one directory, killed on completion. Clean context every time.
-- **7 tools, not 240.** The CEO gets exactly what it needs. ~1,200 tokens of tool overhead per turn.
+- **7 tools, not 240.** The CEO gets exactly what it needs. ~600 tokens of tool overhead per turn.
 - **TASKS.md is the board.** No database, no kanban UI, no drag-and-drop. A markdown file both human and AI read natively. Git-trackable for free.
 - **Safety is not optional.** 13 guardrails ship in V1. Workers can't use Bash. Workers can't write outside their folder. Budget caps, timeouts, inactivity pause — all enforced at the SDK level, not by polite instructions.
 
@@ -167,7 +167,9 @@ Thirteen guardrails. All ship in V1. Not negotiable.
 | Orphan cleanup | Marks stale tasks failed on restart | Always on |
 | Human kill | Dashboard kill button, preserves output | Always on |
 
-Workers are sandboxed at the SDK level. `disallowedTools: ['Bash']` plus a `canUseTool` path guard on every Write/Edit. This isn't a suggestion in a prompt — it's a hard block in the runtime.
+Workers are sandboxed at the SDK level. `disallowedTools: ['Bash']` plus a `canUseTool` path guard on every Write/Edit/MultiEdit. The guard returns the SDK's `PermissionResult` type (`{ behavior: 'deny' }`) — not a polite suggestion, a hard block in the runtime.
+
+The CEO is also guarded: it cannot modify its own SOUL.md or GOALS.md, preventing autonomous self-modification of its own rules. Server binds to `127.0.0.1` only — not network-accessible. Safety config PATCH validates all fields with type and range bounds (e.g., max 10 workers, max $500/day budget).
 
 ---
 
@@ -275,4 +277,4 @@ MIT
 
 ---
 
-Built by [Peter Haddad](https://github.com/phaddad90). Designed with Claude Opus 4.6 through three rounds of red-team review — because if you're going to let AI manage AI, you'd better stress-test it first.
+Built by [Peter Haddad](https://github.com/phaddad90). Designed with Claude Opus 4.6 through four rounds of red-team review (20 specialist critics) — because if you're going to let AI manage AI, you'd better stress-test it first.
