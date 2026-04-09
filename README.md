@@ -106,11 +106,13 @@ Your Project ──────────────────────�
 
 Three tabs. Always-visible status bar. Always-visible prompt input.
 
-**Terminals** — Full-width xterm.js CEO terminal. Worker terminals as expandable pills below. Click to swap view, Back button to return.
+**Terminals** — Full-width xterm.js CEO terminal with proper text wrapping. Worker terminals as expandable pills below — click to swap view, Back button to return. Your prompts echo in cyan (`> You: message`) so it reads like a conversation, not a black box.
 
 **Tasks** — Live-rendered TASKS.md. Planned / Active / Done / Failed sections. Add tasks, retry failed ones, kill active workers — all inline.
 
-**Status** — Per-agent cost breakdown, heartbeat info, safety guard status, today's metrics (tasks completed, success rate, spend, heartbeat skip rate).
+**Status** — Per-agent cost breakdown, heartbeat info, safety guard status, today's metrics (tasks completed, success rate, spend, heartbeat skip rate, human interactions, CEO restarts).
+
+**Prompt input** — Always visible, works from any tab. Multi-line supported — Shift+Enter for line breaks, Enter to send. Auto-resizes as you type.
 
 **Status bar** — CEO state, worker count, today's spend. Goes amber at 80% budget, red at 100%.
 
@@ -193,11 +195,14 @@ Every event is tracked to `metrics.jsonl`:
 - Cost milestones (25%, 50%, 80%, 100% of budget)
 - CEO restarts (age limit, crash)
 
-Daily reports auto-generate to `reports/YYYY-MM-DD.md` on shutdown.
+Daily reports auto-generate to `reports/YYYY-MM-DD.md` on shutdown. The CEO also writes a "Lessons Learned" entry to MEMORY.md on shutdown — what worked, what didn't, what to change tomorrow.
+
+Trigger a daily review without shutting down:
 
 ```
-GET /api/metrics/summary    JSON summary of today's session
-GET /api/metrics/report     Markdown daily report
+POST /api/daily-review      CEO reviews metrics and writes lessons learned
+GET  /api/metrics/summary   JSON summary of today's session
+GET  /api/metrics/report    Markdown daily report
 ```
 
 ---
