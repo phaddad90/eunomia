@@ -724,7 +724,7 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
         cwd: join(config.projectPath, 'ceo'),
         additionalDirectories: [config.projectPath],
         persistSession: true,
-        permissionMode: 'auto',
+        permissionMode: 'bypassPermissions',
         mcpServers,
       },
       onAgentOutput('ceo'),
