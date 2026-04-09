@@ -156,6 +156,14 @@ You plan and coordinate work for this project. You break the mission into tasks,
 - You cannot modify source code directly — delegate to workers
 - When unsure, note it in TASKS.md for the human to decide
 
+## Daily Review
+When prompted with a daily review (usually at end of day or shutdown), write a "Lessons Learned" entry to MEMORY.md covering:
+- What worked today (successful patterns, good task breakdowns, efficient workers)
+- What didn't work (failed tasks, bad model choices, tasks that needed retry)
+- What to do differently tomorrow (adjusted strategies, better task scoping, model routing changes)
+- Any blockers or decisions the human needs to make
+Keep it under 15 lines. Be specific, not generic. This is for your future self.
+
 ## Personality
 Direct, no fluff. Lead with the decision, then the reasoning.
 `,
@@ -393,6 +401,30 @@ async function main() {
   // Metrics API
   app.get('/api/metrics/summary', (_req, res) => {
     res.json(metrics.getSummaryJson());
+  });
+
+  // Daily review (trigger without shutdown)
+  app.post('/api/daily-review', async (_req, res) => {
+    safety.recordHumanInteraction();
+    const ceo = adapter.getCeoSession();
+    if (!ceo) return res.status(503).json({ error: 'CEO not running' });
+
+    const summary = metrics.getSummaryJson();
+    const reviewPrompt = `Daily review time. Here are today's metrics:
+- Cost: $${summary.totalCostUsd.toFixed(2)} | Session: ${summary.sessionDurationMinutes}m
+- Tasks completed: ${summary.tasksCompleted} | Failed: ${summary.tasksFailed}
+- Workers spawned: ${summary.workersSpawned} | Success rate: ${summary.workerSuccessRate}%
+- Heartbeats: ${summary.heartbeatCount} | Skip rate: ${summary.heartbeatSkipRate}%
+- Human interactions: ${summary.humanInteractions}
+
+Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instructions.`;
+
+    try {
+      await adapter.sendMessage(ceo.id, reviewPrompt);
+      res.json({ sent: true, summary });
+    } catch (err) {
+      res.status(500).json({ error: `Failed: ${err}` });
+    }
   });
 
   app.get('/api/metrics/report', (_req, res) => {
@@ -718,12 +750,21 @@ async function main() {
     // 1. Stop heartbeat
     heartbeat.stop();
 
-    // 2. Send CEO shutdown message
+    // 2. Send CEO daily review + shutdown message
     const ceo = adapter.getCeoSession();
     if (ceo) {
       try {
-        await adapter.sendMessage(ceo.id, 'Server shutting down. Write critical context to MEMORY.md now.');
-        await new Promise((r) => setTimeout(r, Math.min(30000, 10000))); // Wait up to 10s in practice
+        const summary = metrics.getSummaryJson();
+        const reviewPrompt = `Daily review time. Here are today's metrics:
+- Cost: $${summary.totalCostUsd.toFixed(2)} | Session: ${summary.sessionDurationMinutes}m
+- Tasks completed: ${summary.tasksCompleted} | Failed: ${summary.tasksFailed}
+- Workers spawned: ${summary.workersSpawned} | Success rate: ${summary.workerSuccessRate}%
+- Heartbeats: ${summary.heartbeatCount} | Skip rate: ${summary.heartbeatSkipRate}%
+- Human interactions: ${summary.humanInteractions}
+
+Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instructions. Then the server is shutting down — save any other critical context.`;
+        await adapter.sendMessage(ceo.id, reviewPrompt);
+        await new Promise((r) => setTimeout(r, 15000)); // Give CEO 15s to write lessons
       } catch { /* ignore */ }
     }
 

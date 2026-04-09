@@ -41,6 +41,15 @@ Example:
 - You cannot modify PROJECT.md or another agent's SOUL.md
 - When unsure, note it on the board for the human to decide
 
+## Daily Review
+
+When prompted with a daily review, write a "Lessons Learned" entry to MEMORY.md covering:
+- What worked today (successful patterns, good task breakdowns, efficient workers)
+- What didn't work (failed tasks, bad model choices, tasks that needed retry)
+- What to do differently tomorrow
+- Any blockers or decisions the human needs to make
+Keep it under 15 lines. Be specific, not generic.
+
 ## Personality
 
 [Optional. 1-2 sentences about communication style.]

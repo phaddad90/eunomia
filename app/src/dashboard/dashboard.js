@@ -501,13 +501,18 @@ async function sendPrompt() {
   if (Date.now() - lastPromptTime < PROMPT_COOLDOWN) return;
   lastPromptTime = Date.now();
 
+  // Echo the prompt in the CEO terminal so it feels like a conversation
+  if (ceoTerminal) {
+    ceoTerminal.write(`\r\n\x1b[1;36m> You:\x1b[0m ${message}\r\n\r\n`);
+  }
+
+  input.value = '';
+
   await fetch('/api/prompt', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message }),
   });
-
-  input.value = '';
 }
 
 async function togglePause() {
