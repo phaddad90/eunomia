@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eunomia</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+</head>
+<body>
+  <!-- Banner -->
+  <div id="banner" class="banner"></div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <span class="header-title">Eunomia</span>
+      <span class="header-project" id="project-name">—</span>
+    </div>
+    <div class="header-right">
+      <span class="cost-badge" id="cost-badge">$0.00</span>
+      <button class="btn" id="pause-btn" onclick="togglePause()">Pause</button>
+      <button class="btn btn-danger" id="stop-btn" onclick="stopAll()">Stop</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" data-tab="terminals" onclick="switchTab('terminals')">Terminals</div>
+    <div class="tab" data-tab="tasks" onclick="switchTab('tasks')">Tasks</div>
+    <div class="tab" data-tab="status" onclick="switchTab('status')">Status</div>
+  </div>
+
+  <!-- Tab: Terminals -->
+  <div class="tab-content active" id="tab-terminals">
+    <div class="terminal-container">
+      <div class="terminal-main">
+        <div id="terminal-ceo"></div>
+        <button class="btn terminal-back-btn" id="back-to-ceo" onclick="showCeoTerminal()">Back to CEO</button>
+      </div>
+      <div class="worker-bar" id="worker-bar">
+        <span style="color: var(--text-muted); font-size: 11px;">Workers:</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Tasks -->
+  <div class="tab-content" id="tab-tasks">
+    <div class="tasks-container" id="tasks-container"></div>
+    <div class="add-task-bar">
+      <input type="text" id="add-task-input" placeholder="New task title..." onkeydown="if(event.key==='Enter')addTask()">
+      <button class="btn btn-accent" onclick="addTask()">Add Task</button>
+    </div>
+  </div>
+
+  <!-- Tab: Status -->
+  <div class="tab-content" id="tab-status">
+    <div class="status-container" id="status-container">
+      <div class="status-card">
+        <div class="status-card-title">CEO Agent</div>
+        <div id="ceo-status-rows"></div>
+      </div>
+      <div class="status-card">
+        <div class="status-card-title">Workers</div>
+        <div id="worker-status-rows"></div>
+      </div>
+      <div class="status-card">
+        <div class="status-card-title">Cost Breakdown</div>
+        <div id="cost-status-rows"></div>
+      </div>
+      <div class="status-card">
+        <div class="status-card-title">Safety</div>
+        <div id="safety-status-rows"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar" id="status-bar">
+    <span><span class="dot green" id="ceo-dot"></span> CEO <span id="ceo-state">Starting</span></span>
+    <span id="worker-count">0 workers</span>
+    <span id="status-cost">$0.00 today</span>
+    <span id="heartbeat-info"></span>
+  </div>
+
+  <!-- Prompt Input -->
+  <div class="prompt-bar">
+    <input type="text" id="prompt-input" placeholder="Prompt CEO..." onkeydown="if(event.key==='Enter')sendPrompt()">
+    <button class="btn btn-accent" onclick="sendPrompt()">Send</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>
