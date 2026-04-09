@@ -230,7 +230,7 @@ function renderTasks(state) {
                 <span class="task-tag">${escapeHtml(t.id)}</span>
                 <span class="task-tag model">${escapeHtml(t.model)}</span>
                 <span class="task-tag ${priorityClass}">${escapeHtml(t.priority)}</span>
-                <span class="task-tag">$${t.maxBudgetUsd.toFixed(2)}</span>
+                <span class="task-tag">$${(t.maxBudgetUsd ?? 0).toFixed(2)}</span>
                 ${t.tokenCost?.totalUsd > 0 ? `<span class="task-tag" style="color: var(--green);">$${t.tokenCost.totalUsd.toFixed(2)} actual</span>` : ''}
                 ${t.notes ? `<span style="color: var(--text-muted);">${escapeHtml(t.notes)}</span>` : ''}
               </div>
@@ -571,6 +571,21 @@ function showSleepScreen() {
   stopped = true;
   hideBanner();
 
+  // Stop polling
+  if (statusIntervalId) { clearInterval(statusIntervalId); statusIntervalId = null; }
+
+  // Disable header buttons
+  document.getElementById('pause-btn').disabled = true;
+  document.getElementById('stop-btn').disabled = true;
+
+  // Dispose all worker terminals
+  for (const [id, w] of Object.entries(workerTerminals)) {
+    w.terminal.dispose();
+    w.container.remove();
+    document.getElementById(`pill-${id}`)?.remove();
+  }
+  workerTerminals = {};
+
   // Hide all tabs and show sleep overlay
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelector('.tabs').style.display = 'none';
@@ -646,11 +661,13 @@ function escapeHtml(str) {
 
 // ─── Init ───
 
+let statusIntervalId = null;
+
 document.addEventListener('DOMContentLoaded', () => {
   initTerminals();
   initPromptInput();
   connectWs();
 
-  setInterval(refreshStatus, 5000);
+  statusIntervalId = setInterval(refreshStatus, 5000);
   refreshStatus();
 });

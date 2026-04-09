@@ -22,7 +22,7 @@ import type { MetricsCollector } from './metrics.js';
 
 type HeartbeatState = 'active' | 'backing_off' | 'paused' | 'stopped';
 
-const HEARTBEAT_PROMPT = 'Check TASKS.md for updates. Review any completed worker output in the workers/ directory. Update task status. Plan next actions if needed. Write important decisions to MEMORY.md.';
+const HEARTBEAT_PROMPT = 'Check TASKS.md. If any tasks changed status since your last check, review the output and update accordingly. Otherwise, confirm no action needed.';
 
 export class HeartbeatScheduler {
   private logger: Logger;

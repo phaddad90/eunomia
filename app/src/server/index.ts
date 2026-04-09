@@ -156,14 +156,6 @@ You plan and coordinate work for this project. You break the mission into tasks,
 - You cannot modify source code directly — delegate to workers
 - When unsure, note it in TASKS.md for the human to decide
 
-## Daily Review
-When prompted with a daily review (usually at end of day or shutdown), write a "Lessons Learned" entry to MEMORY.md covering:
-- What worked today (successful patterns, good task breakdowns, efficient workers)
-- What didn't work (failed tasks, bad model choices, tasks that needed retry)
-- What to do differently tomorrow (adjusted strategies, better task scoping, model routing changes)
-- Any blockers or decisions the human needs to make
-Keep it under 15 lines. Be specific, not generic. This is for your future self.
-
 ## Personality
 Direct, no fluff. Lead with the decision, then the reasoning.
 `,
@@ -255,13 +247,14 @@ async function main() {
   }
 
   const metrics = new MetricsCollector(config.projectPath, logger);
+  safety.setOnDayReset(() => metrics.resetDailyMilestones());
   const heartbeat = new HeartbeatScheduler(logger, safety, tasks, adapter, metrics);
   const mcp = new McpServer(tasks, adapter, safety, heartbeat, logger, config.projectPath, metrics);
 
   // ─── Express + HTTP ───
 
   const app = express();
-  app.use(express.json());
+  app.use(express.json({ limit: '16kb' }));
 
   // Dashboard static files
   const dashboardDir = join(__dirname, '..', 'dashboard');
@@ -315,6 +308,9 @@ async function main() {
   app.post('/api/tasks', async (req, res) => {
     safety.recordHumanInteraction();
     metrics.record('human_interaction', { action: 'create_task' });
+    if (tasks.getPlannedCount() >= safety.getConfig().maxPlannedTasks) {
+      return res.status(429).json({ error: `Planned task limit reached (${safety.getConfig().maxPlannedTasks})` });
+    }
     const task = await tasks.createTask(req.body);
     heartbeat.notifyTaskChange();
     broadcast({ type: 'tasks_updated', data: tasks.getState(), timestamp: new Date().toISOString() });
@@ -726,6 +722,7 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
         persistSession: true,
         permissionMode: 'bypassPermissions',
         mcpServers,
+        canUseTool: safety.createCeoToolGuard(join(config.projectPath, 'ceo')),
       },
       onAgentOutput('ceo'),
     );
@@ -826,7 +823,7 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
 
   // ─── Start Server ───
 
-  server.listen(config.port, () => {
+  server.listen(config.port, '127.0.0.1', () => {
     logger.info({ port: config.port, project: config.projectPath }, `Eunomia running at http://localhost:${config.port}`);
     console.log(`\n  Eunomia running at http://localhost:${config.port}`);
     console.log(`  Project: ${config.projectPath}`);

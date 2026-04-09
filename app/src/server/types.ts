@@ -45,7 +45,7 @@ export interface SessionConfig {
   maxTurns?: number;
   maxBudgetUsd?: number;
   persistSession: boolean;
-  canUseTool?: (tool: string, input: Record<string, unknown>) => { allowed: boolean; reason?: string };
+  canUseTool?: (tool: string, input: Record<string, unknown>, options?: unknown) => Promise<{ behavior: string }>;
 }
 
 export interface SessionInfo {

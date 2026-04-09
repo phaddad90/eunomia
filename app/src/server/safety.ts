@@ -1,4 +1,4 @@
-import { resolve } from 'path';
+import { resolve, sep, join } from 'path';
 import type { SafetyConfig, AgentSession, Task } from './types.js';
 import type { Logger } from 'pino';
 
@@ -10,19 +10,46 @@ export class SafetyModule {
   private lastHumanInteraction = Date.now();
   private paused = false;
   private pendingApprovals = new Map<string, { task: Task; resolve: (approved: boolean) => void }>();
+  private onDayReset?: () => void;
 
   constructor(config: SafetyConfig, logger: Logger) {
     this.config = config;
     this.logger = logger;
   }
 
+  setOnDayReset(cb: () => void): void {
+    this.onDayReset = cb;
+  }
+
   getConfig(): SafetyConfig {
     return { ...this.config };
   }
 
-  updateConfig(partial: Partial<SafetyConfig>): void {
-    Object.assign(this.config, partial);
-    this.logger.info({ config: partial }, 'Safety config updated');
+  updateConfig(partial: Record<string, unknown>): void {
+    // Whitelist + validate each field
+    const validators: Record<string, (v: unknown) => boolean> = {
+      maxConcurrentWorkers: (v) => typeof v === 'number' && v >= 1 && v <= 10,
+      maxDailyBudgetUsd: (v) => typeof v === 'number' && v >= 1 && v <= 500,
+      maxWorkerRuntimeMinutes: (v) => typeof v === 'number' && v >= 1 && v <= 120,
+      maxRetries: (v) => typeof v === 'number' && v >= 0 && v <= 10,
+      inactivityPauseMinutes: (v) => typeof v === 'number' && v >= 5 && v <= 480,
+      heartbeatIntervalMinutes: (v) => typeof v === 'number' && v >= 1 && v <= 60,
+      maxCeoSessionHours: (v) => typeof v === 'number' && v >= 1 && v <= 24,
+      maxPlannedTasks: (v) => typeof v === 'number' && v >= 5 && v <= 100,
+      requireApprovalForSpawn: (v) => typeof v === 'boolean',
+    };
+
+    const applied: Record<string, unknown> = {};
+    for (const [key, validate] of Object.entries(validators)) {
+      if (key in partial && validate(partial[key])) {
+        (this.config as unknown as Record<string, unknown>)[key] = partial[key];
+        applied[key] = partial[key];
+      }
+    }
+
+    if (Object.keys(applied).length > 0) {
+      this.logger.info({ config: applied }, 'Safety config updated');
+    }
   }
 
   // ─── Budget ───
@@ -32,6 +59,7 @@ export class SafetyModule {
     if (today !== this.dailySpendDate) {
       this.dailySpend = 0;
       this.dailySpendDate = today;
+      if (this.onDayReset) this.onDayReset();
     }
     this.dailySpend += usd;
 
@@ -89,21 +117,46 @@ export class SafetyModule {
     return { allowed: true };
   }
 
-  // ─── Worker Write Scope ───
+  // ─── Write Scope Guards ───
 
-  createWorkerToolGuard(workerDir: string): (tool: string, input: Record<string, unknown>) => { allowed: boolean; reason?: string } {
-    const resolvedWorkerDir = resolve(workerDir);
+  // SDK CanUseTool signature: (toolName, input, options) => Promise<{ behavior: 'allow'|'deny'|'ask' }>
+  createWorkerToolGuard(workerDir: string): (tool: string, input: Record<string, unknown>, options?: unknown) => Promise<{ behavior: string }> {
+    const resolvedWorkerDir = resolve(workerDir) + sep;
 
-    return (tool: string, input: Record<string, unknown>) => {
+    return async (tool: string, input: Record<string, unknown>) => {
       const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
-    if (WRITE_TOOLS.has(tool)) {
+      if (WRITE_TOOLS.has(tool)) {
         const targetPath = input.file_path as string;
-        if (targetPath && !resolve(targetPath).startsWith(resolvedWorkerDir)) {
-          this.logger.warn({ tool, targetPath, workerDir: resolvedWorkerDir }, 'Worker write blocked — outside scope');
-          return { allowed: false, reason: 'Workers can only write to their output directory' };
+        if (targetPath) {
+          const resolvedTarget = resolve(targetPath);
+          const inside = resolvedTarget.startsWith(resolvedWorkerDir) || resolvedTarget === resolve(workerDir);
+          if (!inside) {
+            this.logger.warn({ tool, targetPath, workerDir: resolvedWorkerDir }, 'Worker write blocked — outside scope');
+            return { behavior: 'deny' };
+          }
         }
       }
-      return { allowed: true };
+      return { behavior: 'allow' };
+    };
+  }
+
+  // CEO guard: prevent modification of its own SOUL.md and GOALS.md
+  createCeoToolGuard(ceoDir: string): (tool: string, input: Record<string, unknown>, options?: unknown) => Promise<{ behavior: string }> {
+    const protectedFiles = [
+      resolve(join(ceoDir, 'SOUL.md')),
+      resolve(join(ceoDir, 'GOALS.md')),
+    ];
+
+    return async (tool: string, input: Record<string, unknown>) => {
+      const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
+      if (WRITE_TOOLS.has(tool)) {
+        const targetPath = input.file_path as string;
+        if (targetPath && protectedFiles.includes(resolve(targetPath))) {
+          this.logger.warn({ tool, targetPath }, 'CEO write blocked — protected file');
+          return { behavior: 'deny' };
+        }
+      }
+      return { behavior: 'allow' };
     };
   }
 

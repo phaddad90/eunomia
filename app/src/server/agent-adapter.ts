@@ -239,12 +239,33 @@ export class AgentAdapter {
       for await (const message of queryResult) {
         this.handleSdkMessage(session, message, onOutput);
       }
+
+      // Natural completion — clean up the session
+      if (session.status === 'running') {
+        session.status = 'stopped';
+        session.info.status = 'stopped';
+        session.info.runtime = Date.now() - new Date(session.info.startedAt).getTime();
+        if (onOutput) onOutput(`\r\n[Eunomia] Agent ${session.id} completed.\r\n`);
+        this.logger.info({ agentId: session.id, role: session.role }, 'Agent completed naturally');
+        this.outputCallbacks.delete(session.id);
+        this.messageQueues.delete(session.id);
+        this.messageResolvers.delete(session.id);
+        this.queryHandles.delete(session.id);
+        this.sessions.delete(session.id);
+      }
     } catch (err) {
       if (session.status === 'running') {
         session.status = 'crashed';
         session.info.status = 'crashed';
+        session.info.runtime = Date.now() - new Date(session.info.startedAt).getTime();
         this.logger.error({ agentId: session.id, err }, 'Agent session crashed');
         if (onOutput) onOutput(`\r\n[Eunomia] Agent crashed: ${err}\r\n`);
+        // Clean up crashed sessions too
+        this.outputCallbacks.delete(session.id);
+        this.messageQueues.delete(session.id);
+        this.messageResolvers.delete(session.id);
+        this.queryHandles.delete(session.id);
+        this.sessions.delete(session.id);
       }
     }
   }
