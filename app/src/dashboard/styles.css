@@ -144,15 +144,16 @@ body {
   position: relative;
   min-height: 0;
   overflow: hidden;
+  padding: 0 16px;
 }
 
 #terminal-ceo,
-[id^="terminal-worker-"] {
+[id^="terminal-"] {
   position: absolute;
-  inset: 0;
-  height: 100%;
-  width: 100%;
-  padding-left: 12px;
+  top: 0;
+  bottom: 0;
+  left: 16px;
+  right: 16px;
 }
 
 .terminal-back-btn {
