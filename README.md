@@ -15,8 +15,6 @@ A lean, browser-based command centre that runs a team of Claude Code agents from
 
 Built because existing multi-agent tools burn 10x the tokens for the same output. Eunomia was designed from the ground up around token efficiency — three rounds of adversarial red-team review, 15 critics, stress-tested to a risk score of 15/125 before a single line of code was written.
 
-![Dashboard](docs/screenshot.png)
-
 ---
 
 ## The idea
