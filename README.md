@@ -19,15 +19,29 @@ Built because existing multi-agent tools burn 10x the tokens for the same output
 
 ## The idea
 
-Most orchestrators treat AI agents like stateless contractors — full re-briefing every interaction, hundreds of tool definitions inflating every turn, session history ballooning across heartbeats. The result: your usage limits evaporate in minutes.
+We started with a question: *why does multi-agent AI orchestration burn through token limits in minutes?*
 
-Eunomia flips it. Agents are employees, not contractors:
+We dug in. Studied Paperclip AI (36K GitHub stars, the leading orchestrator). Read the GitHub issues. Read the Reddit complaints. Read the source code. Found three root causes:
 
-- **CEO persists.** One long-running session with auto-compaction. Context lives in files (SOUL.md, GOALS.md, MEMORY.md), not in bloated conversation history.
+1. **Session accumulation.** Every heartbeat resumes the full conversation history. By heartbeat 10, you're carrying millions of tokens of stale context. One user reported 11.6M input tokens on a single heartbeat.
+2. **Skill file bloat.** 38KB of instruction files loaded on every cycle, even when the agent needs 10% of them. Plus 240 MCP tool definitions adding 24K tokens per turn.
+3. **No memory, just re-briefing.** Agents don't learn. They get told everything, every time. The "briefing" isn't the prompt — it's the architectural assumption that agents are stateless.
+
+So we hypothesised: *what if agents were employees, not contractors?*
+
+Contractors need a full brief every engagement. Employees build institutional knowledge. They have a role (SOUL.md), targets (GOALS.md), and working memory (MEMORY.md). They read files when they need context instead of being force-fed everything on every turn.
+
+We stress-tested this through three rounds of adversarial red-team review — 15 critics across token economics, architecture, UX, chaos engineering, and strategic viability. The first round failed hard (5/5 FAIL). We revised. Failed again with conditions. Revised again. Third round: 5/5 unconditional PASS with an aggregate risk score of 15/125.
+
+Then we built it. Then we ran a fourth round against the actual code — found the implementation had introduced new risks the brief couldn't have predicted (worker write isolation was silently broken, CEO could rewrite its own rules, server was network-accessible). Fixed all of them.
+
+The result:
+
+- **CEO persists.** One long-running session with auto-compaction. Context lives in files, not in bloated conversation history.
 - **Workers are disposable.** Spawned for one task, scoped to one directory, killed on completion. Clean context every time.
-- **7 tools, not 240.** The CEO gets exactly what it needs. ~600 tokens of tool overhead per turn.
-- **TASKS.md is the board.** No database, no kanban UI, no drag-and-drop. A markdown file both human and AI read natively. Git-trackable for free.
-- **Safety is not optional.** 13 guardrails ship in V1. Workers can't use Bash. Workers can't write outside their folder. Budget caps, timeouts, inactivity pause — all enforced at the SDK level, not by polite instructions.
+- **7 tools, not 240.** ~600 tokens of tool overhead per turn.
+- **TASKS.md is the board.** No database. A markdown file both human and AI read natively.
+- **Safety is not optional.** 13 guardrails enforced at the SDK level, not by polite instructions in a prompt. Four rounds of red-team review to get here.
 
 ---
 
@@ -67,38 +81,56 @@ Options:
 
 ## How it works
 
+You point Eunomia at a project folder. It scans for context, generates a mission brief, and spins up a CEO agent in your browser. The CEO reads its soul and goals, checks the task board, and starts planning.
+
+When it decides something needs building, it spawns a temporary worker — a separate Claude Code session scoped to its own directory, sandboxed from the rest of the codebase. The worker does the job and dies. The CEO reviews the output, updates the board, and moves on.
+
+You watch the whole thing live in the dashboard. Prompt the CEO when you want to steer. Pause when you walk away. Kill workers that go sideways. The system tracks every token spent and writes a daily lessons-learned report.
+
 ```
-localhost:4600 (browser)
-       |
-       | WebSocket + REST
-       v
-Eunomia Server ─────────────────────────────────
-  |
-  |── agent-adapter    SDK wrapper (spawn / kill / stream)
-  |     |── CEO        persistent session, auto-compacting
-  |     |── Workers    temporary, task-scoped, disposable
-  |
-  |── tasks            TASKS.md parser + in-memory cache
-  |── mcp-server       7 tools exposed to CEO only
-  |── heartbeat        adaptive interval (10m default, backs off)
-  |── safety           13 guardrails, SDK-enforced
-  |── metrics          usage analytics, daily reports
-  |── logger           structured logs (pino, daily rotation)
-  |
-  v
-Your Project ───────────────────────────────────
-  |── PROJECT.md       mission + goals (auto-generated)
-  |── TASKS.md         the board (CEO writes, human edits)
-  |── ceo/
-  |     |── SOUL.md    who the CEO is
-  |     |── GOALS.md   what it's targeting
-  |     |── MEMORY.md  what it remembers (50-line cap, rotated)
-  |── workers/
-        |── task-042/
-              |── output/   work product
+                    ┌─────────────────────────────────┐
+                    │     localhost:4600 (browser)     │
+                    │                                  │
+                    │  Terminals │ Tasks │ Status       │
+                    │  ┌──────────────────────────┐   │
+                    │  │  > You: build the API     │   │
+                    │  │  CEO: On it. Spawning...  │   │
+                    │  └──────────────────────────┘   │
+                    │  [$4.20 today]  [Pause]  [Stop]  │
+                    └──────────────┬──────────────────┘
+                                   │ WebSocket + REST
+                    ┌──────────────┴──────────────────┐
+                    │        Eunomia Server            │
+                    │                                  │
+                    │  agent-adapter ── SDK wrapper     │
+                    │    ├── CEO (persistent session)   │
+                    │    └── Workers (spawn & kill)     │
+                    │                                  │
+                    │  tasks ────── TASKS.md cache      │
+                    │  mcp-server ─ 7 tools for CEO    │
+                    │  heartbeat ── adaptive (10m-60m)  │
+                    │  safety ───── 13 SDK guardrails   │
+                    │  metrics ──── analytics + reports │
+                    └──────────────┬──────────────────┘
+                                   │
+                    ┌──────────────┴──────────────────┐
+                    │         Your Project             │
+                    │                                  │
+                    │  PROJECT.md ── the mission        │
+                    │  TASKS.md ──── the board          │
+                    │  ceo/                             │
+                    │    ├── SOUL.md ── who it is       │
+                    │    ├── GOALS.md ─ what it targets │
+                    │    └── MEMORY.md  what it learned │
+                    │  workers/                         │
+                    │    └── task-042/                  │
+                    │         └── output/ ── the work   │
+                    └─────────────────────────────────┘
 ```
 
-**The loop:** CEO reads its soul and goals. Checks the task board. Breaks work into tasks. Spawns a worker. Worker completes (or fails). CEO reviews. Repeat. You watch, intervene when needed, or walk away — the inactivity pause will stop spending after 60 minutes of silence.
+**The CEO loop:** Read soul and goals. Check the board. Plan. Delegate. Review. Write lessons. Repeat. The heartbeat starts at 10 minutes and backs off when nothing's happening — doubles after 3 idle cycles, caps at 60 minutes, resets instantly when work arrives.
+
+**The human loop:** Watch the terminal. Prompt when needed. Drag tasks around. Kill bad workers. Walk away — the inactivity pause stops spending after 60 minutes of silence. Come back, hit resume, pick up where you left off.
 
 ---
 
