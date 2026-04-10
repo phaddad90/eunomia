@@ -5,3 +5,6 @@ logs/
 *.log
 .DS_Store
 PROJECT-STATUS.md
+docs/PROPOSAL-PRODUCT.md
+docs/RED-TEAM-PRODUCT-FEEDBACK.md
+commercial/
