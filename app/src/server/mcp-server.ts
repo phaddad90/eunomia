@@ -9,7 +9,7 @@ import { join } from 'path';
 import { mkdirSync, writeFileSync } from 'fs';
 
 /**
- * Eunomia MCP Server — in-process, exposed to CEO only.
+ * Eunomia MCP Server - in-process, exposed to CEO only.
  *
  * 7 tools:
  * - tasks_list: Read tasks filtered by status
@@ -20,7 +20,7 @@ import { mkdirSync, writeFileSync } from 'fs';
  * - kill_worker: Force-stop a worker
  * - list_workers: See all active workers
  *
- * Every handler is wrapped in try/catch — errors return structured
+ * Every handler is wrapped in try/catch - errors return structured
  * responses to the CEO, never crash the server.
  */
 
@@ -210,7 +210,7 @@ export class McpServer {
     const tasks = this.tasks.listTasks(status ? { status: status as 'planned' | 'active' | 'done' | 'failed' } : undefined);
     const lines = tasks.map((t) => {
       let line = `[${t.status}] ${t.id}: ${t.title} (${t.model}, ${t.priority}, $${t.maxBudgetUsd})`;
-      if (t.notes) line += ` — ${t.notes}`;
+      if (t.notes) line += ` - ${t.notes}`;
       return line;
     });
     return this.ok(lines.length > 0 ? lines.join('\n') : 'No tasks found.');
@@ -232,7 +232,7 @@ export class McpServer {
 
     this.heartbeat.notifyTaskChange();
     this.notifyTasksChanged();
-    return this.ok(`Task created: ${task.id} — ${task.title}`);
+    return this.ok(`Task created: ${task.id} - ${task.title}`);
   }
 
   private async tasksUpdate(input: Record<string, unknown>): Promise<ToolResult> {
@@ -295,7 +295,7 @@ export class McpServer {
     const sanitizedDesc = (task.description || '').slice(0, 500).replace(/[#]/g, '');
 
     // Write worker SOUL.md
-    const soulContent = `# SOUL — Worker for ${sanitizedTitle}
+    const soulContent = `# SOUL - Worker for ${sanitizedTitle}
 
 ## Task
 ${sanitizedTitle}
@@ -323,7 +323,7 @@ $${task.maxBudgetUsd}
       haiku: 'claude-haiku-4-5-20251001',
     };
 
-    // Spawn the worker FIRST — only mark active if spawn succeeds
+    // Spawn the worker FIRST - only mark active if spawn succeeds
     // Output callback is wired AFTER spawn so we have the real session.id
     let session;
     try {
@@ -352,7 +352,7 @@ $${task.maxBudgetUsd}
       this.adapter.setOutputCallback(session.id, outputCb);
     }
 
-    // Spawn succeeded — now mark task active
+    // Spawn succeeded - now mark task active
     await this.tasks.updateTask(taskId, {
       status: 'active',
       assignee: session.id,

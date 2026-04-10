@@ -240,7 +240,7 @@ export class MetricsCollector {
     const summary = this.getLatestSummaryOrGenerate();
     const date = summary.date || new Date().toISOString().split('T')[0];
 
-    const report = `# Eunomia Daily Report — ${date}
+    const report = `# Eunomia Daily Report - ${date}
 
 ## Summary
 

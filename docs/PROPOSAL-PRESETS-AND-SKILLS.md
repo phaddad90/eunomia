@@ -9,12 +9,12 @@ Right now every Eunomia project starts with the same generic CEO. You write the 
 - A website build needs someone who thinks in components and pages
 - An architecture project needs someone who thinks in systems and tradeoffs
 
-And certain workflows repeat across projects — red-teaming, deployment, auditing, testing. These shouldn't be reinvented every time.
+And certain workflows repeat across projects - red-teaming, deployment, auditing, testing. These shouldn't be reinvented every time.
 
 **Two features:**
 
-1. **Preset Agents** — pre-built CEO personalities you pick at project init. Each one has a tailored SOUL.md, GOALS.md, and recommended model/config.
-2. **Premade Skills** — callable workflows the CEO or human can invoke on demand. Like playbooks. "Run a red team." "Deploy to staging." "Generate a brand audit."
+1. **Preset Agents** - pre-built CEO personalities you pick at project init. Each one has a tailored SOUL.md, GOALS.md, and recommended model/config.
+2. **Premade Skills** - callable workflows the CEO or human can invoke on demand. Like playbooks. "Run a red team." "Deploy to staging." "Generate a brand audit."
 
 ---
 
@@ -69,7 +69,7 @@ Choose a CEO preset:
   [Copywriting]  [Architecture]  [Security]  [Custom]
 ```
 
-The preset's SOUL.md and GOALS.md get copied to `{project}/ceo/`. You can then edit them — they're yours. The preset is just the starting point.
+The preset's SOUL.md and GOALS.md get copied to `{project}/ceo/`. You can then edit them - they're yours. The preset is just the starting point.
 
 ### Preset config.json
 
@@ -98,7 +98,7 @@ This copies `{project}/ceo/SOUL.md`, `GOALS.md`, and current safety config to `p
 
 ### How it works
 
-Skills are structured workflows — more than a single prompt, less than a full feature. They have:
+Skills are structured workflows - more than a single prompt, less than a full feature. They have:
 - A **trigger** (human clicks in UI, CEO calls via MCP, or scheduled)
 - A **prompt template** with variables
 - A **execution mode** (CEO handles it, spawn a dedicated worker, or spawn multiple workers)
@@ -173,19 +173,19 @@ Be thorough but concise. Under 1500 words.
 
 ### Execution Modes
 
-**`ceo`** — The CEO handles the skill itself. Good for planning/strategy skills.
+**`ceo`** - The CEO handles the skill itself. Good for planning/strategy skills.
 - "Generate an architecture decision record"
 - "Write a project status report"
 
-**`single-worker`** — Spawns one worker with the skill prompt. Good for focused tasks.
+**`single-worker`** - Spawns one worker with the skill prompt. Good for focused tasks.
 - "Security scan this codebase"
 - "Review all content for brand voice"
 
-**`multi-worker`** — Spawns multiple workers in parallel, CEO compiles results. Good for red-teaming, multi-perspective reviews.
+**`multi-worker`** - Spawns multiple workers in parallel, CEO compiles results. Good for red-teaming, multi-perspective reviews.
 - "Red team this feature"
 - "Review this PR from 3 angles"
 
-**`script`** — Runs a shell command (with safety guards). Good for deployment.
+**`script`** - Runs a shell command (with safety guards). Good for deployment.
 - "Build and deploy to staging"
 - "Run test suite and report"
 
@@ -320,6 +320,6 @@ Runs the project's test command, parses results, reports failures with context.
 
 2. **Should skills be versioned?** If we update a skill prompt, existing projects keep their version until they update. Or do they always use the latest?
 
-3. **Should the CEO be able to create new skills?** The CEO could write a skill.json + prompt.md to the skills directory, making it reusable. Powerful but risky — needs approval mode.
+3. **Should the CEO be able to create new skills?** The CEO could write a skill.json + prompt.md to the skills directory, making it reusable. Powerful but risky - needs approval mode.
 
 4. **How do script-mode skills interact with safety?** Running `npm run build` needs Bash access, which is blocked for workers. Script skills would need a separate execution path with explicit human approval.

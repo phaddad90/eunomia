@@ -1,4 +1,4 @@
-# Red Team Feedback — Project Eunomia
+# Red Team Feedback - Project Eunomia
 
 > Five independent critics reviewed the brief on 2026-04-09.
 > This document synthesises their findings into actionable themes.
@@ -9,7 +9,7 @@
 
 The Devil's Advocate was the most brutal: **"Eunomia is a procrastination project dressed up as productivity infrastructure."**
 
-The argument: Peter has 26 weeks to build 20 microservices. Eunomia will take 3-4 weeks to build properly (not the 3 sessions the brief claims — there are 12 subsystems described). That's 2-3 fewer services shipped. The ROI only works if Eunomia makes the remaining work 2-3x faster, and nothing in the brief proves that.
+The argument: Peter has 26 weeks to build 20 microservices. Eunomia will take 3-4 weeks to build properly (not the 3 sessions the brief claims - there are 12 subsystems described). That's 2-3 fewer services shipped. The ROI only works if Eunomia makes the remaining work 2-3x faster, and nothing in the brief proves that.
 
 The research Peter compiled himself argues against multi-agent: single agents match or beat multi-agent at equal token budgets. Claude Code's native Agent Teams feature already does CEO-to-worker delegation with `SendMessage`. The dashboard replaces things Peter already has (terminal, ClickUp, terminal prompt input).
 
@@ -31,8 +31,8 @@ The Token Economics critic stress-tested every number:
 **Why the brief is wrong:**
 - System prompt overhead is ~3,500 tokens per turn (baked into the SDK, not controllable)
 - Built-in Claude Code tools (Read, Write, Bash, etc.) add ~2,000-3,000 tokens on top of Eunomia's MCP tools
-- Conversation history grows between compactions — by heartbeat 20, the CEO carries 100K+ tokens of history
-- CEO output tokens on Opus ($75/MTok) are the single biggest cost driver — the brief doesn't separate input vs output
+- Conversation history grows between compactions - by heartbeat 20, the CEO carries 100K+ tokens of history
+- CEO output tokens on Opus ($75/MTok) are the single biggest cost driver - the brief doesn't separate input vs output
 - Workers doing real work (15+ turns with file reads, code generation, testing) consume ~800K tokens each, not 100K
 
 **26-week projection:** $5,200-$15,600 for the conservative case (5 tasks/day). Still cheaper than a junior dev, but not the "~1M tokens/day" the brief promises.
@@ -57,14 +57,14 @@ The CEO can spawn unlimited workers simultaneously. Nothing in the brief caps co
 **Fix:** Hard `maxConcurrentWorkers = 3` in the process manager. The `spawn_worker` MCP tool must check this before creating a process. Non-negotiable.
 
 ### 2b. Worker writes to production code (Risk Score: 20)
-Workers get read access to the full project folder. But SOUL.md instructions are advisory — nothing physically prevents a worker from modifying files it shouldn't. If Worker A modifies source files directly instead of writing to its output folder, those changes are invisible to the review workflow and may break Worker B.
+Workers get read access to the full project folder. But SOUL.md instructions are advisory - nothing physically prevents a worker from modifying files it shouldn't. If Worker A modifies source files directly instead of writing to its output folder, those changes are invisible to the review workflow and may break Worker B.
 
 **Fix:** Enforce write scope at the SDK level via `canUseTool` permission handler. Workers must be physically unable to write outside `workers/{task-id}/`. This is the difference between "we asked it not to" and "it can't."
 
 ### 2c. Unattended cost accrual (Risk Score: 20)
 Peter goes to lunch. The CEO keeps running heartbeats, spawning workers, burning tokens. No circuit breaker. Over 2 hours unattended: 12 CEO heartbeats + 10+ worker sessions = significant spend with no human oversight.
 
-**Fix:** `autoStopAfter` timer — if no human interaction for 60 minutes, pause all heartbeats and refuse new worker spawns. Also: daily token budget with hard stop. Also: optional `workingHours` config.
+**Fix:** `autoStopAfter` timer - if no human interaction for 60 minutes, pause all heartbeats and refuse new worker spawns. Also: daily token budget with hard stop. Also: optional `workingHours` config.
 
 ---
 
@@ -84,7 +84,7 @@ Both the Architecture and Chaos critics flagged this independently:
 
 The UX critic made the strongest argument here:
 
-> "AI agents don't work in kanban cadence. Tasks fly between columns in minutes. The 'In Progress' and 'Review' columns are transient — they reflect a state that lasts minutes, not hours. 3 of 5 columns will be empty most of the time."
+> "AI agents don't work in kanban cadence. Tasks fly between columns in minutes. The 'In Progress' and 'Review' columns are transient - they reflect a state that lasts minutes, not hours. 3 of 5 columns will be empty most of the time."
 
 **The granularity mismatch problem:** Peter thinks in features ("Build pricing engine"). The CEO thinks in tasks ("Wire /quote endpoint"). The board becomes the CEO's scratchpad, not Peter's overview. AI-generated micro-tasks drown human-created goals.
 
@@ -125,11 +125,11 @@ On a 14" MacBook (1440x900 usable), stacking terminals + kanban + status cards +
 
 ---
 
-## Theme 7: SDK V2 Is Unstable — Need an Adapter
+## Theme 7: SDK V2 Is Unstable - Need an Adapter
 
 The Architecture critic rated this as high-risk:
 
-> "The V2 API is marked 'unstable preview.' If it changes — and it will — you face a rewrite of process-manager.ts and mcp-server.ts at minimum."
+> "The V2 API is marked 'unstable preview.' If it changes - and it will - you face a rewrite of process-manager.ts and mcp-server.ts at minimum."
 
 **Fix:** Wrap the SDK in a thin `agent-adapter.ts` that exposes `spawnAgent`, `killAgent`, `resumeAgent`, `streamOutput`. When the SDK changes, update one file. Consider building Phase 1 against the CLI (`claude --model opus --add-dir ...`) and migrating to the SDK once it stabilises.
 

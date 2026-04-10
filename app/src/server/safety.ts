@@ -131,7 +131,7 @@ export class SafetyModule {
           const resolvedTarget = resolve(targetPath);
           const inside = resolvedTarget.startsWith(resolvedWorkerDir) || resolvedTarget === resolve(workerDir);
           if (!inside) {
-            this.logger.warn({ tool, targetPath, workerDir: resolvedWorkerDir }, 'Worker write blocked — outside scope');
+            this.logger.warn({ tool, targetPath, workerDir: resolvedWorkerDir }, 'Worker write blocked - outside scope');
             return { behavior: 'deny' };
           }
         }
@@ -160,16 +160,16 @@ export class SafetyModule {
 
         // Block protected files
         if (protectedFiles.includes(resolvedTarget)) {
-          this.logger.warn({ tool, targetPath }, 'CEO write blocked — protected file');
+          this.logger.warn({ tool, targetPath }, 'CEO write blocked - protected file');
           return { behavior: 'deny' };
         }
 
-        // Size guard on MEMORY.md — block single writes over 100 lines / 4KB
+        // Size guard on MEMORY.md - block single writes over 100 lines / 4KB
         const memoryFile = resolve(join(ceoDir, 'MEMORY.md'));
         if (resolvedTarget === memoryFile) {
           const content = (input.content as string) || (input.new_string as string) || '';
           if (content.length > 4000 || content.split('\n').length > 100) {
-            this.logger.warn({ tool, bytes: content.length }, 'CEO MEMORY.md write blocked — too large');
+            this.logger.warn({ tool, bytes: content.length }, 'CEO MEMORY.md write blocked - too large');
             return { behavior: 'deny' };
           }
         }
@@ -196,7 +196,7 @@ export class SafetyModule {
   recordHumanInteraction(): void {
     this.lastHumanInteraction = Date.now();
     if (this.paused) {
-      // Don't auto-unpause — human must explicitly resume
+      // Don't auto-unpause - human must explicitly resume
     }
   }
 
@@ -216,7 +216,7 @@ export class SafetyModule {
 
     const { start, end } = this.config.workingHours;
     const now = new Date();
-    // Simple hour check — timezone handling is approximate for V1
+    // Simple hour check - timezone handling is approximate for V1
     const hour = now.getHours();
     const minute = now.getMinutes();
     const currentTime = hour * 60 + minute;
@@ -271,11 +271,11 @@ export class SafetyModule {
       this.pendingApprovals.set(task.id, { task, resolve });
       this.logger.info({ taskId: task.id, title: task.title }, 'Spawn approval requested');
 
-      // 10-minute timeout — auto-reject if no response
+      // 10-minute timeout - auto-reject if no response
       setTimeout(() => {
         if (this.pendingApprovals.has(task.id)) {
           this.pendingApprovals.delete(task.id);
-          this.logger.warn({ taskId: task.id }, 'Spawn approval timed out — auto-rejected');
+          this.logger.warn({ taskId: task.id }, 'Spawn approval timed out - auto-rejected');
           resolve(false);
         }
       }, 10 * 60 * 1000);

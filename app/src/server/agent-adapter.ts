@@ -3,7 +3,7 @@ import type { SessionConfig, AgentSession, SessionInfo, AgentRole } from './type
 import type { Logger } from 'pino';
 
 /**
- * AgentAdapter — thin wrapper around Claude Agent SDK.
+ * AgentAdapter - thin wrapper around Claude Agent SDK.
  *
  * Uses query() with streaming input mode: an async generator as the prompt
  * yields SDKUserMessage objects to keep the session alive for multi-turn.
@@ -21,7 +21,7 @@ interface SDKUserMessage {
   parent_tool_use_id: string | null;
 }
 
-// SDK import — dynamic to handle missing dependency gracefully
+// SDK import - dynamic to handle missing dependency gracefully
 let sdkAvailable = false;
 let queryFn: ((_params: { prompt: string | AsyncIterable<SDKUserMessage>; options?: Record<string, unknown> }) => AsyncIterable<Record<string, unknown>>) | null = null;
 let createSdkMcpServerFn: ((_options: { name: string; tools?: unknown[] }) => unknown) | null = null;
@@ -72,7 +72,7 @@ export class AgentAdapter {
     if (this.sdkLoaded) {
       this.logger.info('Claude Agent SDK loaded successfully');
     } else {
-      this.logger.warn('Claude Agent SDK not available — running in demo mode');
+      this.logger.warn('Claude Agent SDK not available - running in demo mode');
     }
   }
 
@@ -163,7 +163,7 @@ export class AgentAdapter {
     const sessionRef = session;
 
     async function* generateMessages(): AsyncGenerator<SDKUserMessage> {
-      // First message — cold-start prompt
+      // First message - cold-start prompt
       const coldStartPrompt = sessionRef.role === 'ceo'
         ? 'Read your SOUL.md and GOALS.md for your role and targets. Then read TASKS.md to check the current task board. If PROJECT.md has placeholder text, ask the human to fill it in.'
         : 'Read your SOUL.md for your task assignment. Complete the task and write all output to the output/ directory.';
@@ -174,7 +174,7 @@ export class AgentAdapter {
         parent_tool_use_id: null,
       };
 
-      // Subsequent messages — wait via Promise resolution instead of polling
+      // Subsequent messages - wait via Promise resolution instead of polling
       while (sessionRef.status === 'running') {
         if (messageQueue.length > 0) {
           const { message, resolve } = messageQueue.shift()!;
@@ -242,7 +242,7 @@ export class AgentAdapter {
         this.handleSdkMessage(session, message, onOutput);
       }
 
-      // Natural completion — clean up the session
+      // Natural completion - clean up the session
       if (session.status === 'running') {
         session.status = 'stopped';
         session.info.status = 'stopped';

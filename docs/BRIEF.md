@@ -1,4 +1,4 @@
-# Eunomia — Project Brief (v3)
+# Eunomia - Project Brief (v3)
 
 > *Eunomia: Greek goddess of good order and lawful conduct.*
 > v3: 2026-04-09. Incorporates two rounds of red team review.
@@ -28,12 +28,12 @@ Existing open-source alternatives (Claudeck, Companion, OctoAlly) provide partia
 ## Core Principles
 
 1. **Safety guardrails are V1, not V2**
-2. **Cost transparency from minute one** — always-visible spend counter
-3. **Adapter layer around the SDK** — V2 is unstable, isolate the dependency
-4. **One-command start** — defaults for everything, customise later
-5. **Tabbed layout** — don't cram everything on one viewport
-6. **Honest cost estimates** — 4-7M tokens/day, $40-100/day
-7. **TASKS.md over a kanban board** — AI tasks move too fast for drag-and-drop columns
+2. **Cost transparency from minute one** - always-visible spend counter
+3. **Adapter layer around the SDK** - V2 is unstable, isolate the dependency
+4. **One-command start** - defaults for everything, customise later
+5. **Tabbed layout** - don't cram everything on one viewport
+6. **Honest cost estimates** - 4-7M tokens/day, $40-100/day
+7. **TASKS.md over a kanban board** - AI tasks move too fast for drag-and-drop columns
 
 ## Architecture
 
@@ -73,12 +73,12 @@ Eunomia Server (Node.js, single process)
     |
     v
 Project Folder (e.g. /projects/apprintable/)
-    |-- PROJECT.md         (mission, goals — auto-generated, human-editable)
-    |-- TASKS.md           (shared task list — CEO writes, human edits)
+    |-- PROJECT.md         (mission, goals - auto-generated, human-editable)
+    |-- TASKS.md           (shared task list - CEO writes, human edits)
     |-- ceo/
     |   |-- SOUL.md        (human-written or sensible default)
     |   |-- GOALS.md       (human-written or sensible default)
-    |   |-- MEMORY.md      (CEO writes, max 50 lines — see Rotation)
+    |   |-- MEMORY.md      (CEO writes, max 50 lines - see Rotation)
     |   |-- MEMORY-archive.md  (older entries, CEO reads only when needed)
     |
     |-- workers/           (temporary, created per-task, cleaned up after review)
@@ -100,20 +100,20 @@ No kanban board. No database. No drag-and-drop. A markdown file that both the CE
 - [ ] `task-044` Write integration tests for /quote endpoint [sonnet] [medium] [$1.00]
 
 ## Active
-- [~] `task-042` Wire /quote, /catalogue, /rules endpoints [sonnet] [high] [$2.00] — Worker-7 running (4m, $0.28)
+- [~] `task-042` Wire /quote, /catalogue, /rules endpoints [sonnet] [high] [$2.00] - Worker-7 running (4m, $0.28)
 
 ## Done
 - [x] `task-041` Scaffold pricing engine project structure [sonnet] [medium] [$0.52 actual]
 
 ## Failed
-- [!] `task-040` Generate test fixtures for catalogue [haiku] [low] — Retry limit reached (2/2). Needs human review.
+- [!] `task-040` Generate test fixtures for catalogue [haiku] [low] - Retry limit reached (2/2). Needs human review.
 ```
 
 **Why TASKS.md over a board:**
-- CEO reads/writes it natively — no MCP tool overhead for basic task tracking
-- Human edits it in any text editor — no UI needed
-- Git-trackable — full history for free
-- Zero build cost — no board.ts, no SortableJS, no async queue
+- CEO reads/writes it natively - no MCP tool overhead for basic task tracking
+- Human edits it in any text editor - no UI needed
+- Git-trackable - full history for free
+- Zero build cost - no board.ts, no SortableJS, no async queue
 - The dashboard renders it as a formatted task list (read-only display, not interactive)
 
 **In-memory cache:** The server reads TASKS.md on startup and caches it. MCP tool mutations update the cache and write back atomically. The dashboard polls the cache via REST (every 2 seconds) or receives WebSocket push on change.
@@ -151,7 +151,7 @@ If the SDK V2 API changes, only this file changes. If V2 is dropped entirely, th
 
 ### 2. MCP Server (`mcp-server.ts`)
 
-In-process SDK MCP server. Exposed to the CEO agent only. Every handler wrapped in try/catch — returns structured error to CEO on failure, never crashes the server.
+In-process SDK MCP server. Exposed to the CEO agent only. Every handler wrapped in try/catch - returns structured error to CEO on failure, never crashes the server.
 
 **7 tools:**
 
@@ -182,12 +182,12 @@ Single HTML page. No build step. No framework. Dark theme.
 
 ```
 +----------------------------------------------------+
-|  Eunomia — [Project]  [$4.20 today]  [Pause] [Stop] |
+|  Eunomia - [Project]  [$4.20 today]  [Pause] [Stop] |
 +----------------------------------------------------+
 |  [Terminals]  [Tasks]  [Status]                      |
 +----------------------------------------------------+
 |                                                      |
-|  Tab 1 (Terminals) — DEFAULT VIEW                    |
+|  Tab 1 (Terminals) - DEFAULT VIEW                    |
 |  +----------------------------------------------+   |
 |  |  CEO Terminal (xterm.js, full width)           |   |
 |  |  (or expanded Worker terminal with [Back] btn) |   |
@@ -197,7 +197,7 @@ Single HTML page. No build step. No framework. Dark theme.
 |  +----------------------------------------------+   |
 |                                                      |
 |  Tab 2 (Tasks)                                       |
-|  Rendered TASKS.md — formatted, read-only display    |
+|  Rendered TASKS.md - formatted, read-only display    |
 |  + [Add Task] button for human to create tasks       |
 |  + Inline [Edit] per task for quick status changes   |
 |  Tasks show: title, model, priority, budget,         |
@@ -305,7 +305,7 @@ CEO's MEMORY.md is capped at 50 lines. Rotation mechanism:
 1. **Before each write:** Server checks MEMORY.md line count
 2. **If > 50 lines:** Move all content to `MEMORY-archive.md` (append, not overwrite)
 3. **CEO writes new entry** to a fresh MEMORY.md
-4. **CEO's SOUL.md instructs:** "MEMORY.md is your active memory. MEMORY-archive.md exists for older context — read it only if you need historical decisions. Do not rewrite existing entries. Only write NEW decisions, blockers, or discoveries."
+4. **CEO's SOUL.md instructs:** "MEMORY.md is your active memory. MEMORY-archive.md exists for older context - read it only if you need historical decisions. Do not rewrite existing entries. Only write NEW decisions, blockers, or discoveries."
 5. **Archive rotation:** MEMORY-archive.md is capped at 200 lines. Oldest entries are deleted when exceeded.
 
 ## Server Lifecycle
@@ -404,16 +404,16 @@ Based on two rounds of red team stress-testing. Input/output separated for accur
 | Component | Choice | Fallback |
 |-----------|--------|----------|
 | Agent runtime | `@anthropic-ai/claude-agent-sdk` V2 | CLI via `node-pty` |
-| Server | Express + ws | — |
-| Terminal UI | xterm.js (CDN) | — |
-| Task display | Rendered markdown (server-parsed) | — |
-| Logging | pino (daily rotation) | — |
-| Styling | Vanilla CSS (dark theme) | — |
-| Server build | tsup | — |
+| Server | Express + ws | - |
+| Terminal UI | xterm.js (CDN) | - |
+| Task display | Rendered markdown (server-parsed) | - |
+| Logging | pino (daily rotation) | - |
+| Styling | Vanilla CSS (dark theme) | - |
+| Server build | tsup | - |
 
 **Runtime dependencies:** 5 (express, ws, claude-agent-sdk, node-pty, pino)
 **Dev dependencies:** 1 (tsup)
-**Client dependencies:** 0 (CDN: xterm.js only — SortableJS removed)
+**Client dependencies:** 0 (CDN: xterm.js only - SortableJS removed)
 
 ## Project Structure
 
@@ -463,9 +463,9 @@ Project Eunomia/
 
 ### Phase 1: Server + Terminal (Session 1-2)
 1. Package scaffold
-2. `logger.ts` — pino with daily rotation
-3. `agent-adapter.ts` — SDK wrapper with spawn/kill/stream/resume
-4. `safety.ts` — full guardrails module
+2. `logger.ts` - pino with daily rotation
+3. `agent-adapter.ts` - SDK wrapper with spawn/kill/stream/resume
+4. `safety.ts` - full guardrails module
 5. Express server + SIGTERM handler + health endpoint
 6. WebSocket relay for terminal streaming
 7. Dashboard: xterm.js CEO terminal + prompt input + status bar
@@ -473,8 +473,8 @@ Project Eunomia/
 **Deliverable:** Browser shows live CEO terminal. Human can prompt it. Safety guardrails active. Structured logging. Graceful shutdown.
 
 ### Phase 2: Tasks + MCP (Session 3)
-8. `tasks.ts` — TASKS.md read/write/cache with atomic writes
-9. `mcp-server.ts` — 7 tools wired to tasks + process manager
+8. `tasks.ts` - TASKS.md read/write/cache with atomic writes
+9. `mcp-server.ts` - 7 tools wired to tasks + process manager
 10. Dashboard: tasks tab (rendered TASKS.md, add/edit controls)
 11. Wire CEO to MCP server
 
@@ -502,7 +502,7 @@ Project Eunomia/
 - Goal hierarchy (goals → tasks)
 - Git auto-commit
 - Board undo/history UI
-- Worker Bash access (blocked for safety — may revisit with sandboxing in V2)
+- Worker Bash access (blocked for safety - may revisit with sandboxing in V2)
 
 ## Success Criteria
 

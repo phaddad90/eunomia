@@ -1,4 +1,4 @@
-# Research Summary — Token Efficiency in Multi-Agent Systems
+# Research Summary - Token Efficiency in Multi-Agent Systems
 
 > Compiled 2026-04-09. Sources: GitHub issues, academic papers, Anthropic docs, community reports.
 
@@ -42,7 +42,7 @@ Paperclip's prompt to agents is ~100 chars. The bloat comes from:
 ### Auto-Compaction
 - Triggers at ~75-83% context utilisation
 - Achieves 60-80% reduction
-- Lossy — critical details can be lost
+- Lossy - critical details can be lost
 - Mitigated by: keeping critical context in files (SOUL.md, GOALS.md), not conversation
 
 ### Model Routing

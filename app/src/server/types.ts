@@ -21,7 +21,7 @@ export interface Task {
   tokenCost: { input: number; output: number; totalUsd: number };
   notes: string;
   parentGoal?: string;
-  scheduledFor?: string; // ISO datetime — task moves to planned when time arrives
+  scheduledFor?: string; // ISO datetime - task moves to planned when time arrives
 }
 
 export interface TasksState {

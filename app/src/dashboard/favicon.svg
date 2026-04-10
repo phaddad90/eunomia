@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <!-- Brain with circuit lines — "one brain, many hands" -->
+  <!-- Brain with circuit lines - "one brain, many hands" -->
   <rect width="32" height="32" rx="6" fill="#0a0a0f"/>
   <!-- Simplified brain outline -->
   <path d="M12 8 Q8 8 8 12 Q6 14 8 16 Q7 19 10 20 Q10 24 14 24 L18 24 Q22 24 22 20 Q25 19 24 16 Q26 14 24 12 Q24 8 20 8 Q18 6 16 6 Q14 6 12 8Z"

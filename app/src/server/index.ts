@@ -106,7 +106,7 @@ function initProject(projectPath: string, ceoModel: string): void {
 
     writeFileSync(
       join(projectPath, 'PROJECT.md'),
-      `# PROJECT — ${projectName}
+      `# PROJECT - ${projectName}
 
 ## Mission
 
@@ -137,7 +137,7 @@ ${discoveredContext}
   if (!existsSync(join(projectPath, 'ceo', 'SOUL.md'))) {
     writeFileSync(
       join(projectPath, 'ceo', 'SOUL.md'),
-      `# SOUL — CEO Agent
+      `# SOUL - CEO Agent
 
 ## Identity
 - **Name:** CEO
@@ -145,7 +145,7 @@ ${discoveredContext}
 - **Model:** ${ceoModel}
 
 ## How You Work
-- You plan and delegate. You do not write code — workers do.
+- You plan and delegate. You do not write code - workers do.
 - Read PROJECT.md for mission, GOALS.md for KPIs, TASKS.md for status.
 - Use MCP tools (tasks_create, tasks_update, spawn_worker) to manage work.
 - Review completed worker output in workers/{task-id}/output/ before marking done.
@@ -165,7 +165,7 @@ Direct, no fluff. Lead with the decision, then the reasoning.
   if (!existsSync(join(projectPath, 'ceo', 'GOALS.md'))) {
     writeFileSync(
       join(projectPath, 'ceo', 'GOALS.md'),
-      `# GOALS — CEO Agent
+      `# GOALS - CEO Agent
 
 ## KPIs
 
@@ -256,8 +256,8 @@ async function main() {
   app.use(express.json({ limit: '10mb' })); // Large limit for image attachments
 
   // Rate limiting
-  const promptLimiter = rateLimit({ windowMs: 5000, max: 1, message: { error: 'Rate limited — 1 prompt per 5 seconds' } });
-  const taskLimiter = rateLimit({ windowMs: 2000, max: 1, message: { error: 'Rate limited — 1 task per 2 seconds' } });
+  const promptLimiter = rateLimit({ windowMs: 5000, max: 1, message: { error: 'Rate limited - 1 prompt per 5 seconds' } });
+  const taskLimiter = rateLimit({ windowMs: 2000, max: 1, message: { error: 'Rate limited - 1 task per 2 seconds' } });
   app.use('/api/prompt', promptLimiter);
   app.use('/api/daily-review', promptLimiter);
   app.post('/api/tasks', taskLimiter);
@@ -700,7 +700,7 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
       if (task.assignee) {
         const workerSession = adapter.getSession(task.assignee);
         if (!workerSession) {
-          logger.warn({ taskId: task.id, assignee: task.assignee }, 'Active task has no running worker — marking failed');
+          logger.warn({ taskId: task.id, assignee: task.assignee }, 'Active task has no running worker - marking failed');
           await tasks.updateTask(task.id, {
             status: 'failed',
             notes: (task.notes ? task.notes + ' | ' : '') + 'Worker crashed or completed without updating task',
@@ -712,9 +712,9 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
       }
     }
 
-    // CEO crash recovery with backoff — if no CEO session exists, restart it
+    // CEO crash recovery with backoff - if no CEO session exists, restart it
     if (!ceoRestartPending && !adapter.getCeoSession()) {
-      // Check crash frequency — stop retrying after MAX_CEO_CRASHES within the window
+      // Check crash frequency - stop retrying after MAX_CEO_CRASHES within the window
       const now = Date.now();
       if (now - lastCeoCrashTime > CEO_CRASH_WINDOW_MS) {
         ceoCrashCount = 0; // reset counter if outside window
@@ -723,17 +723,17 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
       lastCeoCrashTime = now;
 
       if (ceoCrashCount > MAX_CEO_CRASHES) {
-        logger.error({ crashes: ceoCrashCount }, 'CEO crash limit reached — pausing system');
+        logger.error({ crashes: ceoCrashCount }, 'CEO crash limit reached - pausing system');
         safety.pause('CEO crash loop detected');
         heartbeat.pause();
         broadcast({
           type: 'safety_alert',
-          data: { action: 'paused', reason: `CEO crashed ${ceoCrashCount} times in ${CEO_CRASH_WINDOW_MS / 60000}m — manual restart needed` },
+          data: { action: 'paused', reason: `CEO crashed ${ceoCrashCount} times in ${CEO_CRASH_WINDOW_MS / 60000}m - manual restart needed` },
           timestamp: new Date().toISOString(),
         });
       } else {
         ceoRestartPending = true;
-        logger.warn({ crashCount: ceoCrashCount }, 'CEO session not found — auto-restarting');
+        logger.warn({ crashCount: ceoCrashCount }, 'CEO session not found - auto-restarting');
         metrics.record('ceo_restart', {
           reason: 'crash',
           sessionDurationMinutes: 0,
@@ -754,7 +754,7 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
     const ceo = adapter.getCeoSession();
     if (!ceoRestartPending && ceo && safety.shouldRestartCeo(new Date(ceo.info.startedAt).getTime())) {
       ceoRestartPending = true;
-      logger.info('CEO session age limit reached — restarting');
+      logger.info('CEO session age limit reached - restarting');
 
       const ceoInfo = adapter.getSessionInfo(ceo.id);
       const sessionDurationMinutes = ceoInfo ? Math.round(ceoInfo.runtime / 60000) : 0;
@@ -825,10 +825,10 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
     }
 
     if (!mcpServers) {
-      logger.warn('Could not create SDK MCP server — CEO will run without MCP tools');
+      logger.warn('Could not create SDK MCP server - CEO will run without MCP tools');
       broadcast({
         type: 'safety_alert',
-        data: { action: 'warning', reason: 'CEO started without MCP tools — task management unavailable' },
+        data: { action: 'warning', reason: 'CEO started without MCP tools - task management unavailable' },
         timestamp: new Date().toISOString(),
       });
     }
@@ -879,7 +879,7 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
 - Heartbeats: ${summary.heartbeatCount} | Skip rate: ${summary.heartbeatSkipRate}%
 - Human interactions: ${summary.humanInteractions}
 
-Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instructions. Then the server is shutting down — save any other critical context.`;
+Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instructions. Then the server is shutting down - save any other critical context.`;
         await adapter.sendMessage(ceo.id, reviewPrompt);
         await new Promise((r) => setTimeout(r, 15000)); // Give CEO 15s to write lessons
       } catch { /* ignore */ }

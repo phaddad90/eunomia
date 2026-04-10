@@ -1,4 +1,4 @@
-# PROJECT — [Project Name]
+# PROJECT - [Project Name]
 
 > The mission brief. Every agent reads this. Keep it under 1,000 words.
 
@@ -21,7 +21,7 @@
 
 ## Key Context
 
-[Brief, specific context that all agents need. Not a history lesson — just what's relevant now.]
+[Brief, specific context that all agents need. Not a history lesson - just what's relevant now.]
 
 Example:
 > The pricing engine API is at /Users/peter/Desktop/Websites/pricing-engine/. Week 1 scaffold is complete (70 tests pass, server runs at localhost:3100). Week 2 work is next: BullMQ wiring, integration tests, admin UI, real product data.
@@ -40,4 +40,4 @@ Example:
 
 - **Name:** [Your name]
 - **Available:** [e.g. "4-6 hours/day, UK timezone"]
-- **Comms:** [e.g. "I'll prompt the CEO directly. Don't wait for me — flag blockers on the board and move on."]
+- **Comms:** [e.g. "I'll prompt the CEO directly. Don't wait for me - flag blockers on the board and move on."]

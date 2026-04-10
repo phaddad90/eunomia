@@ -1,4 +1,4 @@
-# GOALS — [Agent Name]
+# GOALS - [Agent Name]
 
 > Your measurable targets. Read this at the start of every session.
 > Written by your human operator. Updated periodically.

@@ -1,4 +1,4 @@
-# Red Team v4 — Full System Review (Code-Level)
+# Red Team v4 - Full System Review (Code-Level)
 
 > Five specialists reviewed the built codebase on 2026-04-09.
 > This is the first review against actual code (previous rounds reviewed the brief).
@@ -11,7 +11,7 @@ The architecture is sound. The token economics are honest. The safety *intent* i
 
 ## The Three Showstoppers
 
-### 1. `canUseTool` return type is wrong — worker write isolation is silently broken
+### 1. `canUseTool` return type is wrong - worker write isolation is silently broken
 
 **File:** `safety.ts` lines 94-108, `agent-adapter.ts` line 225
 
@@ -27,7 +27,7 @@ When a worker's `for await` loop ends naturally (task complete), no code updates
 
 **File:** `index.ts` line 727 (`bypassPermissions`), no `canUseTool` guard on CEO
 
-The CEO has full unrestricted file access. It can modify SOUL.md, GOALS.md, PROJECT.md, TASKS.md — anything in the project folder. A prompt injection or autonomous decision to "optimise" its instructions would rewrite its own rules with no safeguard.
+The CEO has full unrestricted file access. It can modify SOUL.md, GOALS.md, PROJECT.md, TASKS.md - anything in the project folder. A prompt injection or autonomous decision to "optimise" its instructions would rewrite its own rules with no safeguard.
 
 ---
 
@@ -37,13 +37,13 @@ The CEO has full unrestricted file access. It can modify SOUL.md, GOALS.md, PROJ
 
 | # | Issue | Source | Fix |
 |---|-------|--------|-----|
-| 1 | canUseTool return type mismatch — write isolation broken | Architecture | Return `Promise<{ behavior: 'allow' | 'deny' }>` |
-| 2 | Zombie sessions on natural completion — concurrency cap consumed | Architecture | Add post-loop cleanup in runSdkSession |
+| 1 | canUseTool return type mismatch - write isolation broken | Architecture | Return `Promise<{ behavior: 'allow' | 'deny' }>` |
+| 2 | Zombie sessions on natural completion - concurrency cap consumed | Architecture | Add post-loop cleanup in runSdkSession |
 | 3 | CEO can rewrite SOUL.md/GOALS.md | Chaos | Add canUseTool guard on CEO blocking writes to SOUL.md, GOALS.md |
 | 4 | Server binds 0.0.0.0, not 127.0.0.1 | Security | `server.listen(port, '127.0.0.1')` |
 | 5 | Safety config PATCH has no validation | Security + Chaos | Whitelist fields, validate types/ranges |
 | 6 | Status polling never stops after sleep screen | UX | Clear the interval in showSleepScreen |
-| 7 | Worker xterm.js instances never disposed — memory leak | UX | Dispose on worker stop/crash |
+| 7 | Worker xterm.js instances never disposed - memory leak | UX | Dispose on worker stop/crash |
 
 ### High (should fix)
 
@@ -52,7 +52,7 @@ The CEO has full unrestricted file access. It can modify SOUL.md, GOALS.md, PROJ
 | 8 | Path guard `startsWith` vulnerable to prefix confusion (missing trailing `/`) | Security |
 | 9 | No server-side rate limiting on any endpoint | Security + Chaos |
 | 10 | POST /api/tasks bypasses maxPlannedTasks cap | Security |
-| 11 | Approval deadlock — no timeout on requestApproval | Architecture |
+| 11 | Approval deadlock - no timeout on requestApproval | Architecture |
 | 12 | POST /api/shutdown has no auth token | Security |
 | 13 | Crashed worker leaves task stuck for 30min until timeout | Architecture |
 | 14 | Heartbeat fires indefinitely on dead CEO | Architecture |
@@ -63,7 +63,7 @@ The CEO has full unrestricted file access. It can modify SOUL.md, GOALS.md, PROJ
 
 | # | Issue | Source |
 |---|-------|--------|
-| 17 | Worker terminal fit() called while tab hidden — 0-column resize | UX |
+| 17 | Worker terminal fit() called while tab hidden - 0-column resize | UX |
 | 18 | renderTasks crashes if maxBudgetUsd undefined | UX |
 | 19 | Sleep screen doesn't disable header buttons | UX |
 | 20 | "Remove" button marks task Done instead of deleting | UX |

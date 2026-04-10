@@ -1,4 +1,4 @@
-# Red Team v2 Feedback — Project Eunomia
+# Red Team v2 Feedback - Project Eunomia
 
 > Five critics re-reviewed the revised brief (v2) on 2026-04-09.
 
@@ -30,8 +30,8 @@ No FAILs. No unconditional PASSes. Every critic found the brief dramatically imp
 | Retry death spiral | 16/25 | 3/25 |
 | Board race condition | 16/25 | 3/25 |
 | board.json corruption | 15/25 | 2/25 |
-| **New: Bash tool bypass** | — | **12/25** (new top risk) |
-| **New: CEO compaction drift** | — | **8/25** |
+| **New: Bash tool bypass** | - | **12/25** (new top risk) |
+| **New: CEO compaction drift** | - | **8/25** |
 
 ---
 
@@ -107,7 +107,7 @@ No longer recommending "kill it." But recommending a leaner V1:
 
 > **"Cut the Board module from V1. Use TASKS.md or ClickUp instead. Ship Phase 1 (terminal + adapter + safety + cost tracking) as a standalone tool. Validate with one real service. Only build the board and worker terminals if Phase 1 proves its value."**
 
-> **"Add spawn approval mode as a V1 safety feature — the CEO spawning workers autonomously without human approval is the riskiest part of the system."**
+> **"Add spawn approval mode as a V1 safety feature - the CEO spawning workers autonomously without human approval is the riskiest part of the system."**
 
 > **"Do not start until pricing engine Week 2 is complete. Hard deadline: if not functional in 2 weeks, abandon and use native tools."**
 
@@ -119,7 +119,7 @@ The "<3x single agent" claim in the gap table is aspirational. Corrected consens
 
 - **Realistic target: 4-6x single agent** with current architecture
 - **Achievable with all cost levers engaged: 3-5x** (Sonnet CEO heartbeats, daily restart, adaptive skip, Haiku for simple tasks)
-- **Paperclip comparison: 10x+** — Eunomia is still meaningfully better
+- **Paperclip comparison: 10x+** - Eunomia is still meaningfully better
 
 ---
 

@@ -40,7 +40,7 @@ function connectWs() {
   socket.onclose = () => {
     if (ws === socket) ws = null;
     if (stopped) return; // don't retry after intentional shutdown
-    showBanner('Disconnected — reconnecting...', 'warning');
+    showBanner('Disconnected - reconnecting...', 'warning');
     setTimeout(connectWs, 3000);
   };
 
@@ -114,7 +114,7 @@ function initTerminals() {
 let ceoOutputTimer = null;
 
 function handleTerminalOutput(agentId, data) {
-  // xterm.js needs \r\n — bare \n moves cursor down without returning to column 0
+  // xterm.js needs \r\n - bare \n moves cursor down without returning to column 0
   const normalized = typeof data === 'string' ? data.replace(/\r?\n/g, '\r\n') : data;
 
   if (!agentId || agentId === 'ceo') {
@@ -258,7 +258,7 @@ function renderTasks(state) {
 
   container.innerHTML = html;
 
-  // Attach event listeners (not inline onclick — prevents XSS)
+  // Attach event listeners (not inline onclick - prevents XSS)
   container.querySelectorAll('[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       const action = btn.getAttribute('data-action');
@@ -394,7 +394,7 @@ async function refreshStatus() {
   } catch (e) {
     statusFailCount++;
     if (statusFailCount >= 3) {
-      showBanner('Status polling failed — data may be stale', 'warning');
+      showBanner('Status polling failed - data may be stale', 'warning');
     }
   }
 }
@@ -627,7 +627,7 @@ async function sendPrompt() {
 
   const text = message || '(see attached images)';
 
-  // Echo in terminal — extra blank line for separation from CEO response
+  // Echo in terminal - extra blank line for separation from CEO response
   if (ceoTerminal) {
     const ts = timeStamp();
     const lines = text.split('\n').map(l => l.replace(/\r/g, ''));
@@ -787,7 +787,7 @@ async function saveSettings() {
     body: JSON.stringify(safetyUpdate),
   });
 
-  // CEO model change requires a note — can't hot-swap mid-session
+  // CEO model change requires a note - can't hot-swap mid-session
   const statusEl = document.getElementById('settings-status');
   statusEl.textContent = 'Saved';
   statusEl.style.color = 'var(--green)';
@@ -895,7 +895,7 @@ function switchTab(tab) {
 
 function showBanner(text, type) {
   const banner = document.getElementById('banner');
-  banner.textContent = text; // textContent, not innerHTML — safe
+  banner.textContent = text; // textContent, not innerHTML - safe
   banner.className = 'banner visible';
   if (type === 'warning') banner.classList.add('warning');
   if (type === 'danger') banner.classList.add('danger');

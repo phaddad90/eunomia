@@ -1,4 +1,4 @@
-# Red Team v3 Feedback — Project Eunomia
+# Red Team v3 Feedback - Project Eunomia
 
 > Five critics reviewed brief v3 on 2026-04-09. Third and final round.
 
@@ -19,13 +19,13 @@
 | Worker writes to prod | 20/25 | 12/25 | 2/25 |
 | Worker spawn flood | 20/25 | 4/25 | 3/25 |
 | Unattended cost | 20/25 | 4/25 | 3/25 |
-| CEO compaction drift | — | 8/25 | 4/25 |
-| TASKS.md mutation | — | 3/25 | 3/25 |
+| CEO compaction drift | - | 8/25 | 4/25 |
+| TASKS.md mutation | - | 3/25 | 3/25 |
 | **Aggregate top 5** | **96/125** | **31/125** | **15/125** |
 
 ## Implementation Notes (From All Critics)
 
-These are not conditions — they're recommendations for the build:
+These are not conditions - they're recommendations for the build:
 
 1. **Write heartbeat state machine tests before implementation** (Devil's Advocate, strongly recommended). The adaptive interval + inactivity pause + working hours creates a 6-state machine with high bug density.
 
@@ -43,6 +43,6 @@ These are not conditions — they're recommendations for the build:
 
 ## Devil's Advocate Final Position
 
-> "No conditions this time. The brief is disciplined, honest about costs, architecturally sound, and correctly scoped for 5 sessions. The TASKS.md decision is not just a concession to my feedback — it is a better design that I expect you will never want to reverse. Ship it."
+> "No conditions this time. The brief is disciplined, honest about costs, architecturally sound, and correctly scoped for 5 sessions. The TASKS.md decision is not just a concession to my feedback - it is a better design that I expect you will never want to reverse. Ship it."
 
 ## Brief is Approved for Build

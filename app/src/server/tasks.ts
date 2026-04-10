@@ -53,7 +53,7 @@ export class TaskManager {
       this.tasks = this.parseTasksMd(content);
       this.logger.info({ count: this.tasks.length }, 'Tasks loaded from TASKS.md');
     } catch (err) {
-      this.logger.error({ err }, 'Failed to parse TASKS.md — starting with empty task list');
+      this.logger.error({ err }, 'Failed to parse TASKS.md - starting with empty task list');
       this.tasks = [];
     }
   }
@@ -80,7 +80,7 @@ export class TaskManager {
     watchFile(this.filePath, { interval: 2000 }, (curr, prev) => {
       // Reload if externally modified (not by our own writes)
       if (curr.mtimeMs > prev.mtimeMs && curr.mtimeMs > this.lastWriteTime + 2000) {
-        this.logger.info('TASKS.md modified externally — reloading');
+        this.logger.info('TASKS.md modified externally - reloading');
         // Reload through the mutex to prevent mid-write clobber
         this.serialise(() => {
           const content = readFileSync(this.filePath, 'utf-8');
@@ -111,16 +111,16 @@ export class TaskManager {
       if (trimmed === '## Failed') { currentStatus = 'failed'; continue; }
       if (trimmed === '## Pulled') { currentStatus = 'pulled'; continue; }
 
-      // Task lines: - [x] `task-001` Title [model] [priority] [$budget] — notes
+      // Task lines: - [x] `task-001` Title [model] [priority] [$budget] - notes
       const taskMatch = trimmed.match(/^- \[(.)\] `([^`]+)` (.+)$/);
       if (!taskMatch) continue;
 
       const [, , id, rest] = taskMatch;
 
       // Extract metadata from BEFORE the notes separator
-      const notesSepIdx = rest.search(/\s+[—–-]\s+/);
+      const notesSepIdx = rest.search(/\s+[-–-]\s+/);
       const metaPart = notesSepIdx > 0 ? rest.substring(0, notesSepIdx) : rest;
-      const notesPart = notesSepIdx > 0 ? rest.substring(notesSepIdx).replace(/^\s+[—–-]\s+/, '') : '';
+      const notesPart = notesSepIdx > 0 ? rest.substring(notesSepIdx).replace(/^\s+[-–-]\s+/, '') : '';
 
       const modelMatch = metaPart.match(/\[(opus|sonnet|haiku)\]/i);
       const priorityMatch = metaPart.match(/\[(low|medium|high|critical)\]/i);
@@ -198,7 +198,7 @@ export class TaskManager {
             line += ` [$${t.tokenCost.totalUsd.toFixed(2)} actual]`;
           }
           if (t.notes) {
-            line += ` — ${t.notes}`;
+            line += ` - ${t.notes}`;
           }
           md += line + '\n';
         }
