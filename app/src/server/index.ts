@@ -309,6 +309,21 @@ async function main() {
   app.post('/api/onboarding', async (req, res) => {
     const { projectName, mission, goals, preset, model } = req.body;
 
+    // Validate input
+    if (projectName && (typeof projectName !== 'string' || projectName.length > 200)) {
+      return res.status(400).json({ error: 'Project name max 200 characters' });
+    }
+    if (mission && (typeof mission !== 'string' || mission.length > 2000)) {
+      return res.status(400).json({ error: 'Mission max 2000 characters' });
+    }
+    if (goals && (typeof goals !== 'string' || goals.length > 2000)) {
+      return res.status(400).json({ error: 'Goals max 2000 characters' });
+    }
+    const validModels = ['claude-sonnet-4-6', 'claude-opus-4-6', 'claude-haiku-4-5-20251001'];
+    if (model && !validModels.includes(model)) {
+      return res.status(400).json({ error: 'Invalid model' });
+    }
+
     // Apply preset if selected
     if (preset && preset !== 'default') {
       applyPreset(preset, config.projectPath, logger);
@@ -746,6 +761,8 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
     const prev = lastKnownTokens.get(agentId);
     if (!prev || totalTokens > prev.tokens) {
       lastKnownTokens.set(agentId, { tokens: totalTokens, time: Date.now() });
+      // Reset nudge flag - worker is active again, gets a fresh nudge if it stalls later
+      nudgedWorkers.delete(agentId);
     }
 
     if (delta > 0) {

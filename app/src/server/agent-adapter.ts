@@ -62,7 +62,7 @@ export class AgentAdapter {
   private logger: Logger;
   private sdkLoaded = false;
   private onCostUpdate?: (agentId: string, costUsd: number, tokensInput: number, tokensOutput: number) => void;
-  private onWorkerCompleted?: (agentId: string, taskId: string | undefined, info: SessionInfo) => void;
+  private onWorkerCompleted?: (agentId: string, taskId: string | undefined, info: SessionInfo) => Promise<void> | void;
 
   constructor(logger: Logger) {
     this.logger = logger;
@@ -85,7 +85,7 @@ export class AgentAdapter {
     this.onCostUpdate = cb;
   }
 
-  setOnWorkerCompleted(cb: (agentId: string, taskId: string | undefined, info: SessionInfo) => void): void {
+  setOnWorkerCompleted(cb: (agentId: string, taskId: string | undefined, info: SessionInfo) => Promise<void> | void): void {
     this.onWorkerCompleted = cb;
   }
 
@@ -247,16 +247,24 @@ export class AgentAdapter {
         this.handleSdkMessage(session, message, onOutput);
       }
 
-      // Natural completion - clean up the session
+      // Natural completion - update task BEFORE deleting session to prevent race
       if (session.status === 'running') {
         session.status = 'stopped';
         session.info.status = 'stopped';
         session.info.runtime = Date.now() - new Date(session.info.startedAt).getTime();
         if (onOutput) onOutput(`\r\n[Yunomia] Agent ${session.id} completed.\r\n`);
         this.logger.info({ agentId: session.id, role: session.role }, 'Agent completed naturally');
+
+        // Fire completion callback BEFORE deleting session
+        // This prevents the health loop from seeing an active task with no session
+        // and racing to mark it failed
         if (session.role === 'worker' && this.onWorkerCompleted) {
-          this.onWorkerCompleted(session.id, session.taskId, { ...session.info });
+          try {
+            await this.onWorkerCompleted(session.id, session.taskId, { ...session.info });
+          } catch { /* non-fatal */ }
         }
+
+        // Now safe to clean up
         this.outputCallbacks.delete(session.id);
         this.messageQueues.delete(session.id);
         this.messageResolvers.delete(session.id);
