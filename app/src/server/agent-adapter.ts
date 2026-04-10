@@ -124,9 +124,9 @@ export class AgentAdapter {
       session.status = 'running';
       session.info.status = 'running';
       if (onOutput) {
-        onOutput(`[Eunomia] Agent ${id} started in demo mode (SDK not available)\r\n`);
-        onOutput(`[Eunomia] Model: ${config.model} | CWD: ${config.cwd}\r\n`);
-        onOutput(`[Eunomia] To enable real agents, install @anthropic-ai/claude-agent-sdk\r\n\r\n`);
+        onOutput(`[Yunomia] Agent ${id} started in demo mode (SDK not available)\r\n`);
+        onOutput(`[Yunomia] Model: ${config.model} | CWD: ${config.cwd}\r\n`);
+        onOutput(`[Yunomia] To enable real agents, install @anthropic-ai/claude-agent-sdk\r\n\r\n`);
       }
       this.logger.info({ agentId: id, role, model: config.model }, 'Agent spawned (demo mode)');
       return session;
@@ -140,7 +140,7 @@ export class AgentAdapter {
         session.status = 'crashed';
         session.info.status = 'crashed';
         this.logger.error({ agentId: id, err }, 'Agent session crashed (unhandled)');
-        if (onOutput) onOutput(`\r\n[Eunomia] Agent crashed: ${err}\r\n`);
+        if (onOutput) onOutput(`\r\n[Yunomia] Agent crashed: ${err}\r\n`);
       }
     });
     this.logger.info({ agentId: id, role, model: config.model, cwd: config.cwd }, 'Agent spawned');
@@ -247,7 +247,7 @@ export class AgentAdapter {
         session.status = 'stopped';
         session.info.status = 'stopped';
         session.info.runtime = Date.now() - new Date(session.info.startedAt).getTime();
-        if (onOutput) onOutput(`\r\n[Eunomia] Agent ${session.id} completed.\r\n`);
+        if (onOutput) onOutput(`\r\n[Yunomia] Agent ${session.id} completed.\r\n`);
         this.logger.info({ agentId: session.id, role: session.role }, 'Agent completed naturally');
         this.outputCallbacks.delete(session.id);
         this.messageQueues.delete(session.id);
@@ -261,7 +261,7 @@ export class AgentAdapter {
         session.info.status = 'crashed';
         session.info.runtime = Date.now() - new Date(session.info.startedAt).getTime();
         this.logger.error({ agentId: session.id, err }, 'Agent session crashed');
-        if (onOutput) onOutput(`\r\n[Eunomia] Agent crashed: ${err}\r\n`);
+        if (onOutput) onOutput(`\r\n[Yunomia] Agent crashed: ${err}\r\n`);
         // Clean up crashed sessions too
         this.outputCallbacks.delete(session.id);
         this.messageQueues.delete(session.id);
@@ -372,7 +372,7 @@ export class AgentAdapter {
 
     const cb = this.outputCallbacks.get(agentId);
     if (cb) {
-      cb(`\r\n[Eunomia] Agent ${agentId} stopped.\r\n`);
+      cb(`\r\n[Yunomia] Agent ${agentId} stopped.\r\n`);
     }
 
     // Cleanup

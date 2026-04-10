@@ -2,7 +2,7 @@
 
 ## The Idea
 
-Right now every Eunomia project starts with the same generic CEO. You write the SOUL.md yourself or leave the default. But different projects need fundamentally different leadership:
+Right now every Yunomia project starts with the same generic CEO. You write the SOUL.md yourself or leave the default. But different projects need fundamentally different leadership:
 
 - A branding project needs a creative director, not an engineer
 - A security audit needs a paranoid adversarial thinker
@@ -23,7 +23,7 @@ And certain workflows repeat across projects - red-teaming, deployment, auditing
 ### How it works
 
 ```
-eunomia/
+yunomia/
   presets/
     default/
       SOUL.md
@@ -106,7 +106,7 @@ Skills are structured workflows - more than a single prompt, less than a full fe
 - Optional **project-specific config** (deploy paths, API keys, etc.)
 
 ```
-eunomia/
+yunomia/
   skills/
     red-team/
       skill.json

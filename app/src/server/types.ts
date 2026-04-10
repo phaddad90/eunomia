@@ -104,14 +104,14 @@ export const DEFAULT_SAFETY_CONFIG: SafetyConfig = {
 
 // ─── Server Types ───
 
-export interface EunomiaConfig {
+export interface YunomiaConfig {
   port: number;
   projectPath: string;
   safety: SafetyConfig;
   ceoModel: string;
 }
 
-export const DEFAULT_CONFIG: EunomiaConfig = {
+export const DEFAULT_CONFIG: YunomiaConfig = {
   port: 4600,
   projectPath: '',
   safety: DEFAULT_SAFETY_CONFIG,

@@ -1,4 +1,4 @@
-# Red Team v2 Feedback - Project Eunomia
+# Red Team v2 Feedback - Project Yunomia
 
 > Five critics re-reviewed the revised brief (v2) on 2026-04-09.
 
@@ -119,7 +119,7 @@ The "<3x single agent" claim in the gap table is aspirational. Corrected consens
 
 - **Realistic target: 4-6x single agent** with current architecture
 - **Achievable with all cost levers engaged: 3-5x** (Sonnet CEO heartbeats, daily restart, adaptive skip, Haiku for simple tasks)
-- **Paperclip comparison: 10x+** - Eunomia is still meaningfully better
+- **Paperclip comparison: 10x+** - Yunomia is still meaningfully better
 
 ---
 

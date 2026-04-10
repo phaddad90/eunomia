@@ -1,4 +1,4 @@
-# Red Team Feedback - Project Eunomia
+# Red Team Feedback - Project Yunomia
 
 > Five independent critics reviewed the brief on 2026-04-09.
 > This document synthesises their findings into actionable themes.
@@ -7,13 +7,13 @@
 
 ## The Verdict Nobody Wanted to Hear
 
-The Devil's Advocate was the most brutal: **"Eunomia is a procrastination project dressed up as productivity infrastructure."**
+The Devil's Advocate was the most brutal: **"Yunomia is a procrastination project dressed up as productivity infrastructure."**
 
-The argument: Peter has 26 weeks to build 20 microservices. Eunomia will take 3-4 weeks to build properly (not the 3 sessions the brief claims - there are 12 subsystems described). That's 2-3 fewer services shipped. The ROI only works if Eunomia makes the remaining work 2-3x faster, and nothing in the brief proves that.
+The argument: Peter has 26 weeks to build 20 microservices. Yunomia will take 3-4 weeks to build properly (not the 3 sessions the brief claims - there are 12 subsystems described). That's 2-3 fewer services shipped. The ROI only works if Yunomia makes the remaining work 2-3x faster, and nothing in the brief proves that.
 
 The research Peter compiled himself argues against multi-agent: single agents match or beat multi-agent at equal token budgets. Claude Code's native Agent Teams feature already does CEO-to-worker delegation with `SendMessage`. The dashboard replaces things Peter already has (terminal, ClickUp, terminal prompt input).
 
-**This is the most important question to answer before writing a single line of code: does Eunomia actually make Peter faster, or is it more fun to build a command centre than to grind through 20 microservices?**
+**This is the most important question to answer before writing a single line of code: does Yunomia actually make Peter faster, or is it more fun to build a command centre than to grind through 20 microservices?**
 
 ---
 
@@ -30,7 +30,7 @@ The Token Economics critic stress-tested every number:
 
 **Why the brief is wrong:**
 - System prompt overhead is ~3,500 tokens per turn (baked into the SDK, not controllable)
-- Built-in Claude Code tools (Read, Write, Bash, etc.) add ~2,000-3,000 tokens on top of Eunomia's MCP tools
+- Built-in Claude Code tools (Read, Write, Bash, etc.) add ~2,000-3,000 tokens on top of Yunomia's MCP tools
 - Conversation history grows between compactions - by heartbeat 20, the CEO carries 100K+ tokens of history
 - CEO output tokens on Opus ($75/MTok) are the single biggest cost driver - the brief doesn't separate input vs output
 - Workers doing real work (15+ turns with file reads, code generation, testing) consume ~800K tokens each, not 100K
@@ -102,7 +102,7 @@ The UX critic flagged that Peter must write 3 markdown files (PROJECT.md + CEO S
 
 **Fix:** One-command start with sensible defaults.
 ```
-eunomia init /path/to/project
+yunomia init /path/to/project
 ```
 - Scans directory for README, package.json, existing docs
 - Generates default PROJECT.md, SOUL.md, GOALS.md
@@ -158,7 +158,7 @@ Both Architecture and Chaos critics flagged these as absent but necessary:
 
 The Devil's Advocate's alternative recommendation:
 
-> **Kill Eunomia. Do this instead:**
+> **Kill Yunomia. Do this instead:**
 > 1. One service at a time, sequentially. One CLAUDE.md per service, human-written.
 > 2. Use ClickUp as your kanban (you already pay for it).
 > 3. Use Claude Code natively, with Agent Teams for genuinely parallel sub-tasks.
@@ -166,13 +166,13 @@ The Devil's Advocate's alternative recommendation:
 > 5. Session discipline via SESSION-LOG.md (you already do this).
 > 6. If you must automate worker spawning, write a 50-line shell script.
 
-The counter-argument: Eunomia could become a product itself. A lightweight, token-efficient alternative to Paperclip that other solo founders would use. But that's a different business case than "help Peter build Apprintable faster."
+The counter-argument: Yunomia could become a product itself. A lightweight, token-efficient alternative to Paperclip that other solo founders would use. But that's a different business case than "help Peter build Apprintable faster."
 
 ---
 
 ## Consensus Recommendations (All 5 Critics Agree)
 
-1. **Validate the ROI before building.** Try running the Apprintable pricing engine Week 2 work with just Claude Code + ClickUp + a good CLAUDE.md. Measure tokens. Then estimate what Eunomia would save. If the answer is < 2x, don't build it.
+1. **Validate the ROI before building.** Try running the Apprintable pricing engine Week 2 work with just Claude Code + ClickUp + a good CLAUDE.md. Measure tokens. Then estimate what Yunomia would save. If the answer is < 2x, don't build it.
 
 2. **If building, cut scope ruthlessly.** The brief describes 12 subsystems. V1 needs: process manager, board API, terminal relay, prompt input. That's 4. Everything else is Phase 2+.
 
@@ -186,7 +186,7 @@ The counter-argument: Eunomia could become a product itself. A lightweight, toke
 
 ## What Would Make This Worth Building
 
-If Eunomia can demonstrate:
+If Yunomia can demonstrate:
 - **< 2x token cost** vs Paperclip for equivalent work output
 - **3x throughput** vs single Claude Code session (measured in tasks completed/day)
 - **Zero unattended damage** (safety guardrails hold under adversarial conditions)

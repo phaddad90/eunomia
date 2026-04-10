@@ -32,7 +32,7 @@ Paperclip's prompt to agents is ~100 chars. The bloat comes from:
 ### Persistent Sessions vs Spin-Up-Per-Task
 - Persistent: Benefits from 90% prompt cache hit rate. Risks context accumulation.
 - Per-task: Clean context, no accumulation. Loses caching benefit.
-- Eunomia approach: CEO persistent (benefits from caching), workers per-task (clean context).
+- Yunomia approach: CEO persistent (benefits from caching), workers per-task (clean context).
 
 ### CLAUDE.md Size
 - Community consensus: under 50 lines / 2K tokens

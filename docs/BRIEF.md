@@ -1,6 +1,6 @@
-# Eunomia - Project Brief (v3)
+# Yunomia - Project Brief (v3)
 
-> *Eunomia: Greek goddess of good order and lawful conduct.*
+> *Yunomia: Greek goddess of good order and lawful conduct.*
 > v3: 2026-04-09. Incorporates two rounds of red team review.
 
 ## What This Is
@@ -11,7 +11,7 @@ A browser-based command centre for managing Claude Code agent sessions. One pers
 
 Claude Code's native Agent Teams feature handles orchestration but has gaps no existing tool fills:
 
-| Gap | Native Agent Teams | Eunomia |
+| Gap | Native Agent Teams | Yunomia |
 |-----|-------------------|---------|
 | Browser dashboard | No (terminal only) | Yes |
 | Per-agent cost tracking | No (aggregate only) | Yes |
@@ -42,7 +42,7 @@ Browser (localhost:4600)
     |
     | WebSocket + REST
     v
-Eunomia Server (Node.js, single process)
+Yunomia Server (Node.js, single process)
     |
     |-- agent-adapter.ts ---- SDK abstraction layer (swappable)
     |   |                     Wraps Claude Agent SDK V2
@@ -143,7 +143,7 @@ If the SDK V2 API changes, only this file changes. If V2 is dropped entirely, th
 - `model`: string (e.g. `"claude-opus-4-6"`, `"claude-sonnet-4-6"`)
 - `cwd`: working directory
 - `additionalDirectories`: read access paths
-- `mcpServers`: Eunomia MCP for CEO, none for workers
+- `mcpServers`: Yunomia MCP for CEO, none for workers
 - `permissionMode`: CEO `auto`, workers use custom `canUseTool`
 - `maxTurns`, `maxBudgetUsd`: per-session caps
 - `persistSession`: true for CEO, false for workers
@@ -182,7 +182,7 @@ Single HTML page. No build step. No framework. Dark theme.
 
 ```
 +----------------------------------------------------+
-|  Eunomia - [Project]  [$4.20 today]  [Pause] [Stop] |
+|  Yunomia - [Project]  [$4.20 today]  [Pause] [Stop] |
 +----------------------------------------------------+
 |  [Terminals]  [Tasks]  [Status]                      |
 +----------------------------------------------------+
@@ -311,13 +311,13 @@ CEO's MEMORY.md is capped at 50 lines. Rotation mechanism:
 ## Server Lifecycle
 
 ### Startup
-1. Load `eunomia.config.json` (or create with defaults)
+1. Load `yunomia.config.json` (or create with defaults)
 2. Load TASKS.md into memory cache (or create empty)
 3. Scan for orphaned `active` tasks → mark `failed`
 4. Resume CEO session (via stored session ID) or cold-start
 5. Start heartbeat scheduler
 6. Start Express server + WebSocket
-7. Log: "Eunomia started. Project: {name}. CEO: {model}. Port: 4600."
+7. Log: "Yunomia started. Project: {name}. CEO: {model}. Port: 4600."
 
 ### Shutdown (SIGTERM / SIGINT / Ctrl+C)
 1. Stop heartbeat scheduler
@@ -327,7 +327,7 @@ CEO's MEMORY.md is capped at 50 lines. Rotation mechanism:
 5. Kill all worker processes → mark their tasks `failed`
 6. Flush TASKS.md cache to disk
 7. Close all WebSocket connections (code 1001 Going Away)
-8. Log: "Eunomia stopped. Session: {id}. Total spend: ${amount}."
+8. Log: "Yunomia stopped. Session: {id}. Total spend: ${amount}."
 9. Exit
 
 ### Health endpoint
@@ -349,14 +349,14 @@ Using `pino` with daily rotation (keep 7 days). Log levels:
 - `info`: heartbeat fired, worker spawned/killed, task status changes, cost milestones
 - `warn`: budget 80%, worker timeout approaching, CEO session age 75%+, retry triggered
 - `error`: SDK errors, session crashes, API failures, file write failures
-- Separate log file per day: `logs/eunomia-2026-04-09.log`
+- Separate log file per day: `logs/yunomia-2026-04-09.log`
 
 ## Onboarding
 
 One command → dashboard in 30 seconds:
 
 ```bash
-cd /path/to/eunomia/app
+cd /path/to/yunomia/app
 npm run start -- --project /path/to/my/code
 ```
 
@@ -397,7 +397,7 @@ Based on two rounds of red team stress-testing. Input/output separated for accur
 **Comparison:**
 - Paperclip: 10M+ tokens/day for equivalent output
 - Single Claude Code session: ~500K-1M/day
-- Eunomia: 4-6x single agent (honest; 3x is not achievable with heartbeat overhead)
+- Yunomia: 4-6x single agent (honest; 3x is not achievable with heartbeat overhead)
 
 ## Tech Stack
 
@@ -418,7 +418,7 @@ Based on two rounds of red team stress-testing. Input/output separated for accur
 ## Project Structure
 
 ```
-Project Eunomia/
+Project Yunomia/
 |-- app/
 |   |-- package.json
 |   |-- tsconfig.json

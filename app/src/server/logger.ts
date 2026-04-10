@@ -11,7 +11,7 @@ export function initLogger(projectPath?: string): pino.Logger {
   mkdirSync(logDir, { recursive: true });
 
   const today = new Date().toISOString().split('T')[0];
-  const logFile = join(logDir, `eunomia-${today}.log`);
+  const logFile = join(logDir, `yunomia-${today}.log`);
 
   const logger = pino({
     level: 'info',
@@ -39,7 +39,7 @@ export function rotateLogs(dir: string = logDir): void {
   const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
   try {
     for (const file of readdirSync(dir)) {
-      if (!file.startsWith('eunomia-') || !file.endsWith('.log')) continue;
+      if (!file.startsWith('yunomia-') || !file.endsWith('.log')) continue;
       const filePath = join(dir, file);
       const stat = statSync(filePath);
       if (stat.mtimeMs < cutoff) {

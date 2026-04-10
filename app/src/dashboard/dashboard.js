@@ -1,4 +1,4 @@
-// ─── Eunomia Dashboard ───
+// ─── Yunomia Dashboard ───
 // Vanilla JS. No framework. No build step.
 
 // ─── State ───
@@ -21,7 +21,7 @@ function connectWs() {
 
   socket.onopen = () => {
     ws = socket; // only assign to global once open
-    showBanner('Connected to Eunomia', 'info');
+    showBanner('Connected to Yunomia', 'info');
     setTimeout(() => hideBanner(), 3000);
     // Re-sync state on reconnect
     refreshStatus();
@@ -99,7 +99,7 @@ function initTerminals() {
     ceoFitAddon.fit();
   }));
 
-  ceoTerminal.writeln('\x1b[1;35m  Eunomia CEO Terminal\x1b[0m');
+  ceoTerminal.writeln('\x1b[1;35m  Yunomia CEO Terminal\x1b[0m');
   ceoTerminal.writeln('\x1b[90m  Waiting for CEO agent to start...\x1b[0m\r\n');
 
   window.addEventListener('resize', () => {
@@ -933,7 +933,7 @@ function showSleepScreen() {
   `;
   const restartCmd = `npm run dev -- --project ${currentProjectPath || '/path/to/project'}`;
   overlay.innerHTML = `
-    <div style="font-size: 32px; font-weight: 600; color: var(--text-secondary); font-family: var(--font-mono);">Eunomia</div>
+    <div style="font-size: 32px; font-weight: 600; color: var(--text-secondary); font-family: var(--font-mono);">Yunomia</div>
     <div style="color: var(--text-muted);">Session ended. All agents stopped.</div>
     <div style="margin-top: 12px; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);">Restart with:</div>
     <div style="margin-top: 4px; display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 13px; color: var(--accent); padding: 8px 16px; background: var(--bg-tertiary); border-radius: 6px; border: 1px solid var(--border);">

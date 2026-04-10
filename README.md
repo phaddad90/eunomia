@@ -1,12 +1,12 @@
-# Eunomia
+# Yunomia
 
 ```
- ███████╗██╗   ██╗███╗   ██╗ ██████╗ ███╗   ███╗██╗ █████╗
- ██╔════╝██║   ██║████╗  ██║██╔═══██╗████╗ ████║██║██╔══██╗
- █████╗  ██║   ██║██╔██╗ ██║██║   ██║██╔████╔██║██║███████║
- ██╔══╝  ██║   ██║██║╚██╗██║██║   ██║██║╚██╔╝██║██║██╔══██║
- ███████╗╚██████╔╝██║ ╚████║╚██████╔╝██║ ╚═╝ ██║██║██║  ██║
- ╚══════╝ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ ╚═╝     ╚═╝╚═╝╚═╝  ╚═╝
+ ██╗   ██╗██╗   ██╗███╗   ██╗ ██████╗ ███╗   ███╗██╗ █████╗
+ ╚██╗ ██╔╝██║   ██║████╗  ██║██╔═══██╗████╗ ████║██║██╔══██╗
+  ╚████╔╝ ██║   ██║██╔██╗ ██║██║   ██║██╔████╔██║██║███████║
+   ╚██╔╝  ██║   ██║██║╚██╗██║██║   ██║██║╚██╔╝██║██║██╔══██║
+    ██║   ╚██████╔╝██║ ╚████║╚██████╔╝██║ ╚═╝ ██║██║██║  ██║
+    ╚═╝    ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ ╚═╝     ╚═╝╚═╝╚═╝  ╚═╝
 ```
 
 > *One brain. Many hands. No waste.*
@@ -44,13 +44,13 @@ The result:
 **Prerequisites:** Node.js 22+, [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated.
 
 ```bash
-git clone https://github.com/phaddad90/eunomia.git
-cd eunomia/app
+git clone https://github.com/phaddad90/yunomia.git
+cd yunomia/app
 npm install
 npm run dev -- --project /path/to/your/code
 ```
 
-Open **http://localhost:4600**. Eunomia scans your project, generates context files, and starts the CEO. You'll see the terminal streaming within seconds.
+Open **http://localhost:4600**. Yunomia scans your project, generates context files, and starts the CEO. You'll see the terminal streaming within seconds.
 
 | Option | Default |
 |--------|---------|
@@ -61,18 +61,18 @@ Open **http://localhost:4600**. Eunomia scans your project, generates context fi
 ### Updating
 
 ```bash
-cd eunomia
+cd yunomia
 git pull
 cd app && npm install
 ```
 
-Then restart the server. Your project data (TASKS.md, SOUL.md, MEMORY.md, metrics) is stored in your project folder, not in the Eunomia repo - updates are non-destructive.
+Then restart the server. Your project data (TASKS.md, SOUL.md, MEMORY.md, metrics) is stored in your project folder, not in the Yunomia repo - updates are non-destructive.
 
 ---
 
 ## How it works
 
-You point Eunomia at a project folder. It spins up a CEO agent in your browser. The CEO reads its soul and goals, checks the task board, and starts planning.
+You point Yunomia at a project folder. It spins up a CEO agent in your browser. The CEO reads its soul and goals, checks the task board, and starts planning.
 
 When something needs building, it spawns a temporary worker - a separate Claude Code session sandboxed to its own directory. The worker does the job and dies. The CEO reviews the output, updates the board, and moves on.
 
@@ -91,7 +91,7 @@ You watch it all live in a dashboard with live terminals, task tracking, and cos
                     └──────────────┬──────────────────┘
                                    │
                     ┌──────────────┴──────────────────┐
-                    │        Eunomia Server            │
+                    │        Yunomia Server            │
                     │                                  │
                     │  agent-adapter ── SDK wrapper     │
                     │    ├── CEO (persistent session)   │
@@ -129,7 +129,7 @@ You watch it all live in a dashboard with live terminals, task tracking, and cos
 
 Most agent tools treat the UI as an afterthought - a log viewer bolted onto an API. We think the interface is the product. If you're trusting AI to manage your codebase, you need to see what it's doing, intervene naturally, and never feel like you're fighting the tool.
 
-That's why Eunomia has native voice input (no external service - Web Speech API runs locally), image attachments via drag-and-drop (paste a screenshot of a bug, the CEO sees it), multi-line prompts with Shift+Enter, message timestamps so you can track the conversation flow, a sleep screen with a one-click copy restart command, and live settings you can adjust without touching a config file.
+That's why Yunomia has native voice input (no external service - Web Speech API runs locally), image attachments via drag-and-drop (paste a screenshot of a bug, the CEO sees it), multi-line prompts with Shift+Enter, message timestamps so you can track the conversation flow, a sleep screen with a one-click copy restart command, and live settings you can adjust without touching a config file.
 
 Every interaction was designed around one question: what would make this feel like a tool you actually want open all day?
 
@@ -163,7 +163,7 @@ The CEO is also guarded - it cannot rewrite its own rules. Server binds to `127.
 
 ## Configuration
 
-Drop an `eunomia.config.json` in your project directory. Everything is optional - [see full config reference](docs/BRIEF.md#configuration).
+Drop an `yunomia.config.json` in your project directory. Everything is optional - [see full config reference](docs/BRIEF.md#configuration).
 
 Key settings: `maxConcurrentWorkers` (1-10), `maxDailyBudgetUsd` (1-500), `heartbeatIntervalMinutes` (1-60), `requireApprovalForSpawn` (true/false), `workingHours` ({ start, end, timezone }).
 
@@ -209,7 +209,7 @@ Honest numbers. Stress-tested.
 | Sonnet CEO + Sonnet workers | $30 - $70 |
 | Sonnet CEO + Haiku workers | $20 - $50 |
 
-A single Claude Code session runs $5-15/day. Eunomia runs 4-6x that for multi-agent throughput.
+A single Claude Code session runs $5-15/day. Yunomia runs 4-6x that for multi-agent throughput.
 
 ---
 
@@ -265,7 +265,7 @@ A single Claude Code session runs $5-15/day. Eunomia runs 4-6x that for multi-ag
 - Multiple humans, role-based access
 - Goal hierarchy with progress rollup
 - Confirmation mode (CEO proposes, human approves)
-- Remote deployment (run Eunomia on a server, access from anywhere)
+- Remote deployment (run Yunomia on a server, access from anywhere)
 
 ---
 

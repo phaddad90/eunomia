@@ -10,7 +10,7 @@ import { mkdirSync, writeFileSync } from 'fs';
 import { listSkills, runSkill } from './skills.js';
 
 /**
- * Eunomia MCP Server - in-process, exposed to CEO only.
+ * Yunomia MCP Server - in-process, exposed to CEO only.
  *
  * 7 tools:
  * - tasks_list: Read tasks filtered by status

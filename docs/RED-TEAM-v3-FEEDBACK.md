@@ -1,4 +1,4 @@
-# Red Team v3 Feedback - Project Eunomia
+# Red Team v3 Feedback - Project Yunomia
 
 > Five critics reviewed brief v3 on 2026-04-09. Third and final round.
 

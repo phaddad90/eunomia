@@ -15,7 +15,7 @@ import { McpServer } from './mcp-server.js';
 import { MetricsCollector } from './metrics.js';
 import { listPresets, applyPreset } from './presets.js';
 import { listSkills, runSkill } from './skills.js';
-import type { EunomiaConfig, WsMessage, HealthResponse } from './types.js';
+import type { YunomiaConfig, WsMessage, HealthResponse } from './types.js';
 import { DEFAULT_CONFIG, DEFAULT_SAFETY_CONFIG } from './types.js';
 import type { Logger } from 'pino';
 
@@ -24,7 +24,7 @@ const __dirname = dirname(__filename);
 
 // ─── Config ───
 
-function parseArgs(): EunomiaConfig {
+function parseArgs(): YunomiaConfig {
   const args = process.argv.slice(2);
   const config = { ...DEFAULT_CONFIG };
 
@@ -44,12 +44,12 @@ function parseArgs(): EunomiaConfig {
   }
 
   if (!config.projectPath) {
-    console.error('Usage: eunomia --project /path/to/your/code [--port 4600] [--model claude-sonnet-4-6]');
+    console.error('Usage: yunomia --project /path/to/your/code [--port 4600] [--model claude-sonnet-4-6]');
     process.exit(1);
   }
 
   // Load config file if exists
-  const configPath = join(config.projectPath, 'eunomia.config.json');
+  const configPath = join(config.projectPath, 'yunomia.config.json');
   if (existsSync(configPath)) {
     try {
       const fileConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
@@ -233,7 +233,7 @@ async function main() {
   const logger = initLogger(config.projectPath);
   rotateLogs();
 
-  logger.info({ projectPath: config.projectPath, port: config.port, model: config.ceoModel }, 'Eunomia starting');
+  logger.info({ projectPath: config.projectPath, port: config.port, model: config.ceoModel }, 'Yunomia starting');
 
   // Init project structure
   initProject(config.projectPath, config.ceoModel);
@@ -879,8 +879,8 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
       );
       if (z) {
         const sdkTools = buildSdkMcpTools(mcp, z, toolBuilder);
-        const mcpConfig = createMcp({ name: 'eunomia', tools: sdkTools });
-        mcpServers = { eunomia: mcpConfig };
+        const mcpConfig = createMcp({ name: 'yunomia', tools: sdkTools });
+        mcpServers = { yunomia: mcpConfig };
         logger.info({ toolCount: sdkTools.length }, 'MCP server created for CEO');
       }
     }
@@ -994,7 +994,7 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
     }
 
     const totalSpend = safety.getDailySpend();
-    logger.info({ totalSpend: totalSpend.toFixed(2) }, 'Eunomia stopped');
+    logger.info({ totalSpend: totalSpend.toFixed(2) }, 'Yunomia stopped');
     server.close();
     process.exit(0);
   }
@@ -1005,8 +1005,8 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
   // ─── Start Server ───
 
   server.listen(config.port, '127.0.0.1', () => {
-    logger.info({ port: config.port, project: config.projectPath }, `Eunomia running at http://localhost:${config.port}`);
-    console.log(`\n  Eunomia running at http://localhost:${config.port}`);
+    logger.info({ port: config.port, project: config.projectPath }, `Yunomia running at http://localhost:${config.port}`);
+    console.log(`\n  Yunomia running at http://localhost:${config.port}`);
     console.log(`  Project: ${config.projectPath}`);
     console.log(`  CEO Model: ${config.ceoModel}\n`);
     startCeo();

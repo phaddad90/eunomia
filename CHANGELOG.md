@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Eunomia are documented here.
+All notable changes to Yunomia are documented here.
 
 ---
 
@@ -15,7 +15,7 @@ Post-launch polish based on real-world usage and two additional red-team rounds 
 - **Message timestamps** - HH:MM timestamp in grey after each human prompt and CEO response (2-second debounce on CEO output).
 - **Version display** - app version shown in header bar and Status tab, pulled from package.json via health endpoint.
 - **Sleep screen with restart command** - shutdown screen shows the exact `npm run dev` command with the real project path in a selectable box for quick copy-paste.
-- **Project name in header** - extracted from the project path, shown next to "Eunomia" in the header bar.
+- **Project name in header** - extracted from the project path, shown next to "Yunomia" in the header bar.
 - **"Pulled" task status** - human-removed tasks go to a "Pulled" section instead of being marked Done, preserving the audit trail.
 
 ### Bug Fixes
@@ -33,7 +33,7 @@ Post-launch polish based on real-world usage and two additional red-team rounds 
 - **Server-side rate limiting** - `express-rate-limit` on `/api/prompt` (1/5s) and `POST /api/tasks` (1/2s).
 - **Prompt length cap** - 8000 character max on REST and WebSocket prompt inputs.
 - **Task input validation** - title max 200 chars, description max 1000 chars on REST endpoint.
-- **Config file validation** - `eunomia.config.json` safety fields now pass through same type + range validators as the PATCH endpoint.
+- **Config file validation** - `yunomia.config.json` safety fields now pass through same type + range validators as the PATCH endpoint.
 - **Approval timeout** - 10-minute auto-reject if human doesn't respond to spawn approval. Heartbeat skips while approval is pending.
 - **Audit log rotation** - audit.jsonl rotates at 1MB.
 - **MCP import failure surfaced** - broadcasts safety alert to dashboard if CEO starts without MCP tools.
