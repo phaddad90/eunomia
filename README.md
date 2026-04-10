@@ -66,7 +66,7 @@ You point Eunomia at a project folder. It spins up a CEO agent in your browser. 
 
 When something needs building, it spawns a temporary worker — a separate Claude Code session sandboxed to its own directory. The worker does the job and dies. The CEO reviews the output, updates the board, and moves on.
 
-You watch it all live. Prompt the CEO when you want to steer. Pause when you walk away. Kill workers that go sideways.
+You watch it all live in a dashboard with live terminals, task tracking, and cost breakdowns. Prompt the CEO by typing, voice dictation, or dropping in screenshots. Schedule tasks for later. Pause when you walk away. Kill workers that go sideways. Every message is timestamped.
 
 ```
                     ┌─────────────────────────────────┐
@@ -111,7 +111,7 @@ You watch it all live. Prompt the CEO when you want to steer. Pause when you wal
 
 **The CEO loop:** Check the board. Plan. Delegate. Review. Write lessons. The heartbeat starts at 10 minutes, doubles after 3 idle cycles, caps at 60 minutes, resets instantly when work arrives.
 
-**The human loop:** Watch the terminal. Prompt when needed. Walk away — the inactivity pause stops spending after 60 minutes. Come back, hit resume, carry on.
+**The human loop:** Watch the terminal. Prompt when needed — type, dictate via voice, or drop in screenshots. Schedule tasks for later. Walk away — the inactivity pause stops spending after 60 minutes. Come back, hit resume, carry on.
 
 ---
 
@@ -209,7 +209,7 @@ A single Claude Code session runs $5-15/day. Eunomia runs 4-6x that for multi-ag
 
 ## Status
 
-**Current version: v1.0** — fully functional, 5 rounds of red-team review, actively in use.
+**Current version: v1.0.1** — fully functional, 5 rounds of red-team review, actively in use.
 
 ## Roadmap
 
