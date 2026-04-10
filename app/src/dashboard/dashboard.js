@@ -20,10 +20,10 @@ function connectWs() {
   const socket = new WebSocket(`${protocol}//${location.host}/ws`);
 
   socket.onopen = () => {
-    ws = socket; // only assign to global once open
-    showBanner('Connected to Yunomia', 'info');
-    setTimeout(() => hideBanner(), 3000);
-    // Re-sync state on reconnect
+    ws = socket;
+    setConnectionStatus('online');
+    showBanner('Connected', 'info');
+    setTimeout(() => hideBanner(), 2000);
     refreshStatus();
     fetch('/api/tasks').then(r => r.json()).then(data => renderTasks(data)).catch(() => {});
   };
@@ -39,7 +39,8 @@ function connectWs() {
 
   socket.onclose = () => {
     if (ws === socket) ws = null;
-    if (stopped) return; // don't retry after intentional shutdown
+    if (stopped) return;
+    setConnectionStatus('offline');
     showBanner('Disconnected - reconnecting...', 'warning');
     setTimeout(connectWs, 3000);
   };
@@ -1005,6 +1006,20 @@ function hideBanner() {
 
 // ─── Helpers ───
 
+function setConnectionStatus(status) {
+  const bar = document.getElementById('status-bar');
+  const existing = document.getElementById('connection-indicator');
+  if (existing) existing.remove();
+
+  if (status === 'offline') {
+    const indicator = document.createElement('span');
+    indicator.id = 'connection-indicator';
+    indicator.style.cssText = 'color: var(--red); font-weight: 600;';
+    indicator.textContent = 'OFFLINE';
+    bar.prepend(indicator);
+  }
+}
+
 function timeStamp() {
   const now = new Date();
   return now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -1026,6 +1041,18 @@ document.addEventListener('DOMContentLoaded', () => {
   initTerminals();
   initPromptInput();
   connectWs();
+
+  // Browser online/offline detection
+  window.addEventListener('offline', () => {
+    setConnectionStatus('offline');
+    showBanner('Network offline', 'danger');
+  });
+  window.addEventListener('online', () => {
+    setConnectionStatus('online');
+    showBanner('Network restored', 'info');
+    setTimeout(() => hideBanner(), 2000);
+    if (!ws || ws.readyState !== WebSocket.OPEN) connectWs();
+  });
 
   statusIntervalId = setInterval(() => {
     refreshStatus();
