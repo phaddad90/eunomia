@@ -229,22 +229,23 @@ A single Claude Code session runs $5-15/day. Yunomia runs 4-6x that for multi-ag
 
 ## Status
 
-**Current version: v1.0.1** - fully functional, 5 rounds of red-team review, actively in use.
+**Current version: v1.2.0** - fully functional, 5 rounds of red-team review, actively in use.
 
 ## Roadmap
 
-**v1.1 - Sharper CEO** *(next)*
-- Model routing per-heartbeat (Sonnet for routine, Opus for strategy)
-- Worker output summarisation (CEO writes digest, raw output archived)
+**v1.1 - Sharper CEO** *shipped*
+- Context-aware heartbeat prompts (includes board state when tasks change)
+- Worker auto-completion (tasks marked done with cost data when workers finish)
 - Configurable cold-start prompt templates
+- Live running cost per active task in Tasks tab
 
-**v1.2 - Preset Agents + Skills**
+**v1.2 - Preset Agents + Skills** *shipped*
 - 7 CEO presets: Default, Branding, Website, App Dev, Copywriting, Architecture, Security
-- Preset selector at project init (`--preset branding`) or in dashboard
+- Preset selector at project init (`--preset branding`)
 - Skills framework: callable workflows with prompt templates and config
 - Built-in skills: Red Team, Security Scan, Code Review, Brand Audit, Content Review, Test Suite
 - CEO can invoke skills via MCP tool (`run_skill`)
-- Save custom presets from your current CEO config
+- Dashboard Skills tab with click-to-run cards
 
 **v1.3 - Smarter Workers + Deploy**
 - Sandboxed Bash for workers (restricted to output dir only)

@@ -4,6 +4,38 @@ All notable changes to Yunomia are documented here.
 
 ---
 
+## v1.2.0 - 2026-04-10
+
+### Renamed: Eunomia -> Yunomia
+- All code, docs, GitHub repo, config files, log files renamed
+- Domain: yunomia.ai purchased
+- GitHub: phaddad90/yunomia
+
+### v1.1 - Sharper CEO
+- Context-aware heartbeat prompts - includes board state (planned/active/done/failed counts + worker count) when tasks have changed since last check
+- Worker auto-completion - when a worker finishes naturally, its task is automatically marked done with cost data (tokens, duration, USD)
+- Configurable cold-start prompt templates via `coldStartPrompt` in SessionConfig
+- Live running cost per active task in Tasks tab - polls agent costs every 5 seconds, shows "$X.XX running" in amber on active task cards
+
+### v1.2 - Preset Agents + Skills
+- 7 CEO presets (presets/): default, branding, website, app-dev, copywriting, architecture, security. Each with tailored SOUL.md, GOALS.md, and config.json
+- `--preset` CLI flag: `npm run dev -- --project /path --preset branding`
+- Preset loader applies recommended model, heartbeat interval, and worker count
+- REST: GET /api/presets
+- 6 built-in skills (skills/): red-team, security-scan, code-review, brand-audit, content-review, test-suite
+- Skills framework: skill.json + prompt.md with {{variable}} interpolation
+- 3 execution modes: ceo (direct prompt), single-worker (spawns task), multi-worker (spawns parallel tasks)
+- Per-skill config fields (e.g. testCommand for test-suite, brandGuidelinesPath for brand-audit)
+- CEO MCP tool: run_skill (8th tool)
+- REST: GET /api/skills, POST /api/skills/run
+- Dashboard: Skills tab with clickable cards, config forms, and run buttons
+
+### Bug Fixes
+- Terminal word-splitting (take 4): replaced absolute positioning with flex layout + margin on .terminal-main. Worker terminals use .hidden class instead of inline display styles.
+- Sleep screen not showing: show sleep screen BEFORE sending /api/shutdown (server dies mid-request)
+
+---
+
 ## v1.0.1 - 2026-04-10
 
 Post-launch polish based on real-world usage and two additional red-team rounds (v4 code review + v5 final).

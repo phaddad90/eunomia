@@ -661,6 +661,30 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
     logger.info({ agentId, costUsd: costUsd.toFixed(4), delta: delta.toFixed(4), tokensInput, tokensOutput }, 'Cost update');
   });
 
+  // Worker natural completion - update task with cost data
+  adapter.setOnWorkerCompleted(async (agentId, taskId, info) => {
+    if (taskId) {
+      await tasks.updateTask(taskId, {
+        status: 'done',
+        tokenCost: { input: info.tokensInput, output: info.tokensOutput, totalUsd: info.costUsd },
+        notes: `Completed in ${Math.round(info.runtime / 60000)}m, $${info.costUsd.toFixed(2)}`,
+      });
+      metrics.record('worker_completed', {
+        taskId,
+        agentId,
+        model: info.model,
+        durationMinutes: Math.round(info.runtime / 60000),
+        tokensInput: info.tokensInput,
+        tokensOutput: info.tokensOutput,
+        costUsd: info.costUsd,
+        success: true,
+      });
+      heartbeat.notifyTaskChange();
+      broadcast({ type: 'tasks_updated', data: tasks.getState(), timestamp: new Date().toISOString() });
+      logger.info({ taskId, agentId, cost: info.costUsd.toFixed(2) }, 'Worker completed naturally - task marked done');
+    }
+  });
+
   // ─── Worker lifecycle ───
 
   // Wire task change broadcasts from MCP (CEO-initiated task mutations)

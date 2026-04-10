@@ -62,6 +62,7 @@ export class AgentAdapter {
   private logger: Logger;
   private sdkLoaded = false;
   private onCostUpdate?: (agentId: string, costUsd: number, tokensInput: number, tokensOutput: number) => void;
+  private onWorkerCompleted?: (agentId: string, taskId: string | undefined, info: SessionInfo) => void;
 
   constructor(logger: Logger) {
     this.logger = logger;
@@ -82,6 +83,10 @@ export class AgentAdapter {
 
   setOnCostUpdate(cb: (agentId: string, costUsd: number, tokensInput: number, tokensOutput: number) => void): void {
     this.onCostUpdate = cb;
+  }
+
+  setOnWorkerCompleted(cb: (agentId: string, taskId: string | undefined, info: SessionInfo) => void): void {
+    this.onWorkerCompleted = cb;
   }
 
   // ─── Spawn ───
@@ -164,9 +169,9 @@ export class AgentAdapter {
 
     async function* generateMessages(): AsyncGenerator<SDKUserMessage> {
       // First message - cold-start prompt
-      const coldStartPrompt = sessionRef.role === 'ceo'
+      const coldStartPrompt = config.coldStartPrompt || (sessionRef.role === 'ceo'
         ? 'Read your SOUL.md and GOALS.md for your role and targets. Then read TASKS.md to check the current task board. If PROJECT.md has placeholder text, ask the human to fill it in.'
-        : 'Read your SOUL.md for your task assignment. Complete the task and write all output to the output/ directory.';
+        : 'Read your SOUL.md for your task assignment. Complete the task and write all output to the output/ directory.');
 
       yield {
         type: 'user' as const,
@@ -249,6 +254,9 @@ export class AgentAdapter {
         session.info.runtime = Date.now() - new Date(session.info.startedAt).getTime();
         if (onOutput) onOutput(`\r\n[Yunomia] Agent ${session.id} completed.\r\n`);
         this.logger.info({ agentId: session.id, role: session.role }, 'Agent completed naturally');
+        if (session.role === 'worker' && this.onWorkerCompleted) {
+          this.onWorkerCompleted(session.id, session.taskId, { ...session.info });
+        }
         this.outputCallbacks.delete(session.id);
         this.messageQueues.delete(session.id);
         this.messageResolvers.delete(session.id);

@@ -1,6 +1,6 @@
 {
   "name": "yunomia",
-  "version": "1.0.1",
+  "version": "1.2.0",
   "description": "Browser-based command centre for managing Claude Code agent sessions",
   "type": "module",
   "scripts": {

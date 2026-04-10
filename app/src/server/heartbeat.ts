@@ -202,11 +202,20 @@ export class HeartbeatScheduler {
       this.state = 'active';
     }
 
-    // Fire the heartbeat to CEO
+    // Fire the heartbeat to CEO with context
     if (this.ceoAgentId) {
       try {
-        this.logger.info({ interval: Math.round(this.currentIntervalMs / 60000) }, 'Heartbeat fired');
-        await this.adapter.sendMessage(this.ceoAgentId, HEARTBEAT_PROMPT);
+        // Build a context-aware prompt
+        const counts = this.tasks.getStatusCounts();
+        const activeWorkers = this.adapter.getActiveWorkerCount();
+        let prompt = HEARTBEAT_PROMPT;
+
+        if (tasksChanged) {
+          prompt += `\n\nBoard changed since last check. Current state: ${counts.planned} planned, ${counts.active} active, ${counts.done} done, ${counts.failed} failed. ${activeWorkers} worker(s) running.`;
+        }
+
+        this.logger.info({ interval: Math.round(this.currentIntervalMs / 60000), tasksChanged }, 'Heartbeat fired');
+        await this.adapter.sendMessage(this.ceoAgentId, prompt);
       } catch (err) {
         this.logger.error({ err }, 'Heartbeat failed to send to CEO');
       }

@@ -158,7 +158,7 @@ function createWorkerTerminal(agentId) {
   terminal.loadAddon(fitAddon);
   terminal.open(container);
 
-  container.style.display = 'none'; // hidden until user clicks
+  container.classList.add('hidden'); // hidden until user clicks
 
   workerTerminals[agentId] = { terminal, fitAddon, container, needsFit: true };
   addWorkerPill(agentId);
@@ -180,10 +180,10 @@ function addWorkerPill(agentId) {
 function showWorkerTerminal(agentId) {
   if (!workerTerminals[agentId]) return;
 
-  document.getElementById('terminal-ceo').style.display = 'none';
-  Object.values(workerTerminals).forEach(w => w.container.style.display = 'none');
+  document.getElementById('terminal-ceo').classList.add('hidden');
+  Object.values(workerTerminals).forEach(w => w.container.classList.add('hidden'));
 
-  workerTerminals[agentId].container.style.display = 'block';
+  workerTerminals[agentId].container.classList.remove('hidden');
   requestAnimationFrame(() => {
     workerTerminals[agentId].fitAddon.fit();
     workerTerminals[agentId].needsFit = false;
@@ -198,9 +198,9 @@ function showWorkerTerminal(agentId) {
 }
 
 function showCeoTerminal() {
-  Object.values(workerTerminals).forEach(w => w.container.style.display = 'none');
-  document.getElementById('terminal-ceo').style.display = 'block';
-  if (ceoFitAddon) ceoFitAddon.fit();
+  Object.values(workerTerminals).forEach(w => w.container.classList.add('hidden'));
+  document.getElementById('terminal-ceo').classList.remove('hidden');
+  requestAnimationFrame(() => { if (ceoFitAddon) ceoFitAddon.fit(); });
   activeTerminal = 'ceo';
 
   document.querySelectorAll('.worker-pill').forEach(p => p.classList.remove('active'));
@@ -241,6 +241,7 @@ function renderTasks(state) {
                 <span class="task-tag ${priorityClass}">${escapeHtml(t.priority)}</span>
                 <span class="task-tag">$${(t.maxBudgetUsd ?? 0).toFixed(2)}</span>
                 ${t.tokenCost?.totalUsd > 0 ? `<span class="task-tag" style="color: var(--green);">$${t.tokenCost.totalUsd.toFixed(2)} actual</span>` : ''}
+                ${status === 'active' && t.assignee && activeAgentCosts[t.assignee] ? `<span class="task-tag" style="color: var(--amber);">$${activeAgentCosts[t.assignee].toFixed(2)} running</span>` : ''}
                 ${t.scheduledFor ? `<span class="task-tag" style="color: var(--blue);">@ ${new Date(t.scheduledFor).toLocaleString('en-GB', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>` : ''}
                 ${t.notes ? `<span style="color: var(--text-muted);">${escapeHtml(t.notes)}</span>` : ''}
               </div>
@@ -1017,6 +1018,7 @@ function escapeHtml(str) {
 
 let statusIntervalId = null;
 let currentProjectPath = '';
+let activeAgentCosts = {}; // agentId -> costUsd
 
 document.addEventListener('DOMContentLoaded', () => {
   initTerminals();
@@ -1025,8 +1027,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   statusIntervalId = setInterval(() => {
     refreshStatus();
-    // Also refresh tasks as a fallback (MCP changes may not trigger WS)
-    fetch('/api/tasks').then(r => r.json()).then(data => renderTasks(data)).catch(() => {});
+    // Refresh tasks + agent costs as a fallback
+    Promise.all([
+      fetch('/api/tasks').then(r => r.json()).catch(() => null),
+      fetch('/api/agents').then(r => r.json()).catch(() => []),
+    ]).then(([tasksData, agents]) => {
+      // Build cost map from active workers
+      activeAgentCosts = {};
+      if (Array.isArray(agents)) {
+        for (const a of agents) {
+          if (a.role === 'worker' && a.info?.costUsd) {
+            activeAgentCosts[a.id] = a.info.costUsd;
+          }
+        }
+      }
+      if (tasksData) renderTasks(tasksData);
+    });
   }, 5000);
   refreshStatus();
 });

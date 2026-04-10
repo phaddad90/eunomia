@@ -149,15 +149,19 @@ body {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin: 4px 20px 0;
 }
 
 .terminal-main > .terminal-wrapper {
-  position: absolute;
-  top: 4px;
-  bottom: 0;
-  left: 20px;
-  right: 20px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.terminal-main > .terminal-wrapper.hidden {
+  display: none;
 }
 
 .terminal-back-btn {

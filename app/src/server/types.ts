@@ -47,6 +47,7 @@ export interface SessionConfig {
   maxBudgetUsd?: number;
   persistSession: boolean;
   canUseTool?: (tool: string, input: Record<string, unknown>, options?: unknown) => Promise<{ behavior: string }>;
+  coldStartPrompt?: string;
 }
 
 export interface SessionInfo {
