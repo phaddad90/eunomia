@@ -787,9 +787,24 @@ function showSleepScreen() {
     <div style="font-size: 32px; font-weight: 600; color: var(--text-secondary); font-family: var(--font-mono);">Eunomia</div>
     <div style="color: var(--text-muted);">Session ended. All agents stopped.</div>
     <div style="margin-top: 12px; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);">Restart with:</div>
-    <div style="margin-top: 4px; font-family: var(--font-mono); font-size: 13px; color: var(--accent); cursor: pointer; padding: 8px 16px; background: var(--bg-tertiary); border-radius: 6px; border: 1px solid var(--border); user-select: all;"
-         title="Click to select, then Cmd+C to copy">${escapeHtml(restartCmd)}</div>
+    <div style="margin-top: 4px; display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 13px; color: var(--accent); padding: 8px 16px; background: var(--bg-tertiary); border-radius: 6px; border: 1px solid var(--border);">
+      <span style="user-select: all;">${escapeHtml(restartCmd)}</span>
+      <span id="copy-btn" style="cursor: pointer; opacity: 0.6; font-size: 16px;" title="Copy to clipboard">&#x2398;</span>
+    </div>
   `;
+
+  document.getElementById('copy-btn').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(restartCmd);
+      document.getElementById('copy-btn').textContent = '\u2713';
+      document.getElementById('copy-btn').style.opacity = '1';
+      document.getElementById('copy-btn').style.color = '#22c55e';
+      setTimeout(() => {
+        const btn = document.getElementById('copy-btn');
+        if (btn) { btn.textContent = '\u2398'; btn.style.opacity = '0.6'; btn.style.color = ''; }
+      }, 2000);
+    } catch { /* clipboard API may fail */ }
+  });
 
   // Insert after tabs
   const statusBar = document.querySelector('.status-bar');
