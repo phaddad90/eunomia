@@ -581,6 +581,11 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
 
   // ─── Worker lifecycle ───
 
+  // Wire task change broadcasts from MCP (CEO-initiated task mutations)
+  mcp.setOnTasksChanged(() => {
+    broadcast({ type: 'tasks_updated', data: tasks.getState(), timestamp: new Date().toISOString() });
+  });
+
   // Wire worker output streaming to dashboard
   mcp.setOnWorkerOutput((agentId: string) => onAgentOutput(agentId));
 

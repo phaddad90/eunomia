@@ -40,6 +40,7 @@ export class McpServer {
   private onWorkerSpawned?: (agentId: string, taskId: string) => void;
   private onWorkerOutput?: (agentId: string) => (data: string) => void;
   private onSpawnApprovalNeeded?: (taskId: string, task: { title: string; model: string }) => void;
+  private onTasksChanged?: () => void;
 
   constructor(
     tasks: TaskManager,
@@ -69,6 +70,14 @@ export class McpServer {
 
   setOnSpawnApprovalNeeded(cb: (taskId: string, task: { title: string; model: string }) => void): void {
     this.onSpawnApprovalNeeded = cb;
+  }
+
+  setOnTasksChanged(cb: () => void): void {
+    this.onTasksChanged = cb;
+  }
+
+  private notifyTasksChanged(): void {
+    if (this.onTasksChanged) this.onTasksChanged();
   }
 
   getToolDefinitions(): Array<{
@@ -222,6 +231,7 @@ export class McpServer {
     });
 
     this.heartbeat.notifyTaskChange();
+    this.notifyTasksChanged();
     return this.ok(`Task created: ${task.id} — ${task.title}`);
   }
 
@@ -237,6 +247,7 @@ export class McpServer {
     if (!task) return this.error(`Task not found: ${taskId}`);
 
     this.heartbeat.notifyTaskChange();
+    this.notifyTasksChanged();
     return this.ok(`Task ${taskId} updated: ${JSON.stringify(changes)}`);
   }
 
@@ -359,6 +370,7 @@ $${task.maxBudgetUsd}
     });
 
     this.heartbeat.notifyTaskChange();
+    this.notifyTasksChanged();
     this.logger.info({ taskId, agentId: session.id, model: task.model }, 'Worker spawned');
     return this.ok(`Worker ${session.id} spawned for task ${taskId} (${task.model})`);
   }
@@ -413,6 +425,7 @@ $${task.maxBudgetUsd}
     }
 
     this.heartbeat.notifyTaskChange();
+    this.notifyTasksChanged();
     return this.ok(`Worker ${agentId} killed.`);
   }
 

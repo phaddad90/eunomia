@@ -670,6 +670,10 @@ document.addEventListener('DOMContentLoaded', () => {
   initPromptInput();
   connectWs();
 
-  statusIntervalId = setInterval(refreshStatus, 5000);
+  statusIntervalId = setInterval(() => {
+    refreshStatus();
+    // Also refresh tasks as a fallback (MCP changes may not trigger WS)
+    fetch('/api/tasks').then(r => r.json()).then(data => renderTasks(data)).catch(() => {});
+  }, 5000);
   refreshStatus();
 });
