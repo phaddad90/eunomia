@@ -730,11 +730,21 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
   // ─── Cost Tracking (delta-based to avoid double-counting cumulative totals) ───
 
   const lastKnownCost = new Map<string, number>();
+  const lastKnownTokens = new Map<string, { tokens: number; time: number }>();
+  const STALL_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes with 0 new tokens = stalled
 
   adapter.setOnCostUpdate((agentId, costUsd, tokensInput, tokensOutput) => {
     const previous = lastKnownCost.get(agentId) || 0;
     const delta = Math.max(0, costUsd - previous);
     lastKnownCost.set(agentId, costUsd);
+
+    // Track token activity for stall detection
+    const totalTokens = tokensInput + tokensOutput;
+    const prev = lastKnownTokens.get(agentId);
+    if (!prev || totalTokens > prev.tokens) {
+      lastKnownTokens.set(agentId, { tokens: totalTokens, time: Date.now() });
+    }
+
     if (delta > 0) {
       safety.recordSpend(delta);
       metrics.checkCostMilestone(safety.getDailySpend(), config.safety.maxDailyBudgetUsd);
@@ -777,6 +787,8 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
   mcp.setOnWorkerOutput((agentId: string) => onAgentOutput(agentId));
 
   mcp.setOnWorkerSpawned((agentId, taskId) => {
+    // Start tracking token activity from spawn time
+    lastKnownTokens.set(agentId, { tokens: 0, time: Date.now() });
     broadcast({
       type: 'agent_status',
       agentId,
@@ -808,12 +820,23 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
   const CEO_CRASH_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
   setInterval(async () => {
-    // Worker timeouts
+    // Worker health check: stall detection + hard timeout
     for (const session of adapter.getActiveSessions('worker')) {
       const startTime = new Date(session.info.startedAt).getTime();
       const task = session.taskId ? tasks.getTask(session.taskId) : undefined;
-      if (safety.isWorkerTimedOut(startTime, task?.maxRuntimeMinutes)) {
-        logger.warn({ agentId: session.id, taskId: session.taskId }, 'Worker timed out');
+
+      // Check for stall: 0 new tokens in STALL_THRESHOLD_MS
+      const activity = lastKnownTokens.get(session.id);
+      const isStalled = activity
+        ? (Date.now() - activity.time > STALL_THRESHOLD_MS)
+        : (Date.now() - startTime > STALL_THRESHOLD_MS); // no activity record = no tokens ever
+
+      // Kill if stalled OR hard timeout exceeded
+      const timedOut = safety.isWorkerTimedOut(startTime, task?.maxRuntimeMinutes);
+      const reason = isStalled ? 'stalled (no tokens for 5min)' : 'hard timeout';
+
+      if (isStalled || timedOut) {
+        logger.warn({ agentId: session.id, taskId: session.taskId, reason }, `Worker killed: ${reason}`);
         try {
           // Capture info before kill
           const info = adapter.getSessionInfo(session.id);
@@ -839,11 +862,15 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
             });
           }
 
+          // Clean up token tracking
+          lastKnownTokens.delete(session.id);
+          lastKnownCost.delete(session.id);
+
           if (session.taskId) {
             const current = tasks.getTask(session.taskId);
             await tasks.updateTask(session.taskId, {
               status: 'failed',
-              notes: 'Worker timed out',
+              notes: reason,
               retryCount: (current?.retryCount ?? 0) + 1,
             });
             heartbeat.notifyTaskChange();
