@@ -81,6 +81,49 @@
           <div style="padding: 4px 0; font-size: 13px; color: var(--text-muted);">Loading...</div>
         </div>
       </div>
+      <div class="status-card">
+        <div class="status-card-title">Settings</div>
+        <div class="settings-grid" id="settings-grid">
+          <label>CEO Model
+            <select id="setting-ceo-model">
+              <option value="claude-sonnet-4-6">Sonnet</option>
+              <option value="claude-opus-4-6">Opus</option>
+              <option value="claude-haiku-4-5-20251001">Haiku</option>
+            </select>
+          </label>
+          <label>Max Workers
+            <select id="setting-max-workers">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3" selected>3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </label>
+          <label>Daily Budget ($)
+            <input type="number" id="setting-budget" min="1" max="500" value="50">
+          </label>
+          <label>Heartbeat (min)
+            <input type="number" id="setting-heartbeat" min="1" max="60" value="10">
+          </label>
+          <label>Worker Timeout (min)
+            <input type="number" id="setting-worker-timeout" min="1" max="120" value="30">
+          </label>
+          <label>Inactivity Pause (min)
+            <input type="number" id="setting-inactivity" min="5" max="480" value="60">
+          </label>
+          <label>Spawn Approval
+            <select id="setting-approval">
+              <option value="false" selected>Off</option>
+              <option value="true">On</option>
+            </select>
+          </label>
+          <div class="settings-actions">
+            <button class="btn btn-accent" onclick="saveSettings()">Save</button>
+            <span id="settings-status" style="font-size: 12px; color: var(--green);"></span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

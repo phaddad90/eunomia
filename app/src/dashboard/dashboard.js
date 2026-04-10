@@ -371,6 +371,9 @@ async function refreshStatus() {
       ${statusRow('Approvals Pending', safety.pendingApprovals.length.toString())}
     `;
 
+    // Populate settings with current values (only on first load)
+    loadSettingsValues(safety.config, health.ceo.model);
+
     updateStatusBar(health, heartbeat);
     updateCostBadge(health.budget);
 
@@ -746,6 +749,58 @@ async function approveSpawn(taskId) {
 async function rejectSpawn(taskId) {
   await fetch(`/api/safety/reject/${taskId}`, { method: 'POST' });
   hideBanner();
+}
+
+// ─── Settings ───
+
+let settingsLoaded = false;
+
+function loadSettingsValues(config, ceoModel) {
+  if (settingsLoaded || !config) return;
+  settingsLoaded = true;
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = String(val); };
+  set('setting-ceo-model', ceoModel || 'claude-sonnet-4-6');
+  set('setting-max-workers', config.maxConcurrentWorkers);
+  set('setting-budget', config.maxDailyBudgetUsd);
+  set('setting-heartbeat', config.heartbeatIntervalMinutes);
+  set('setting-worker-timeout', config.maxWorkerRuntimeMinutes);
+  set('setting-inactivity', config.inactivityPauseMinutes);
+  set('setting-approval', String(config.requireApprovalForSpawn));
+}
+
+async function saveSettings() {
+  const get = (id) => document.getElementById(id)?.value;
+
+  const safetyUpdate = {
+    maxConcurrentWorkers: parseInt(get('setting-max-workers')),
+    maxDailyBudgetUsd: parseInt(get('setting-budget')),
+    heartbeatIntervalMinutes: parseInt(get('setting-heartbeat')),
+    maxWorkerRuntimeMinutes: parseInt(get('setting-worker-timeout')),
+    inactivityPauseMinutes: parseInt(get('setting-inactivity')),
+    requireApprovalForSpawn: get('setting-approval') === 'true',
+  };
+
+  await fetch('/api/safety/config', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(safetyUpdate),
+  });
+
+  // CEO model change requires a note — can't hot-swap mid-session
+  const statusEl = document.getElementById('settings-status');
+  statusEl.textContent = 'Saved';
+  statusEl.style.color = 'var(--green)';
+
+  const selectedModel = get('setting-ceo-model');
+  const currentModel = document.querySelector('[id="ceo-status-rows"]')?.textContent;
+  if (selectedModel && !currentModel?.includes(selectedModel)) {
+    statusEl.textContent = 'Saved (CEO model applies on next restart)';
+    statusEl.style.color = 'var(--amber)';
+  }
+
+  settingsLoaded = false; // refresh on next poll
+  setTimeout(() => { statusEl.textContent = ''; }, 4000);
 }
 
 // ─── Sleep Screen ───

@@ -58,6 +58,16 @@ Open **http://localhost:4600**. Eunomia scans your project, generates context fi
 | `--port <number>` | 4600 |
 | `--model <name>` | claude-sonnet-4-6 |
 
+### Updating
+
+```bash
+cd eunomia
+git pull
+cd app && npm install
+```
+
+Then restart the server. Your project data (TASKS.md, SOUL.md, MEMORY.md, metrics) is stored in your project folder, not in the Eunomia repo — updates are non-destructive.
+
 ---
 
 ## How it works
