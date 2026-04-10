@@ -129,7 +129,9 @@ You watch it all live in a dashboard with live terminals, task tracking, and cos
 
 Most agent tools treat the UI as an afterthought - a log viewer bolted onto an API. We think the interface is the product. If you're trusting AI to manage your codebase, you need to see what it's doing, intervene naturally, and never feel like you're fighting the tool.
 
-That's why Yunomia has native voice input (no external service - Web Speech API runs locally), image attachments via drag-and-drop (paste a screenshot of a bug, the CEO sees it), multi-line prompts with Shift+Enter, message timestamps so you can track the conversation flow, a sleep screen with a one-click copy restart command, and live settings you can adjust without touching a config file.
+That's why Yunomia has native voice input (no external service - Web Speech API runs locally), image attachments via drag-and-drop (paste a screenshot of a bug, the CEO sees it), multi-line prompts with Shift+Enter, message timestamps, live running cost per task, a network status indicator, and an onboarding wizard that gets you from zero to running without touching a config file.
+
+The Status tab gives you inline editors for PROJECT.md, SOUL.md, and GOALS.md - edit your agent's personality and targets without leaving the dashboard. A running project total shows lifetime cost across all sessions.
 
 Every interaction was designed around one question: what would make this feel like a tool you actually want open all day?
 
@@ -143,7 +145,8 @@ Thirteen guardrails. All SDK-enforced. Not prompt-based suggestions.
 |-------|-------------|---------|
 | Concurrency cap | Rejects spawn if at limit | 3 workers |
 | Daily budget | Warns at 80%, hard stops at 100% | $50/day |
-| Worker timeout | Kills worker, marks task failed | 60 min |
+| Stall detection | Nudge at 2min, kill at 5min silence | Always on |
+| Hard timeout | Kills worker regardless of activity | 15 min |
 | Retry limit | Marks task failed, needs human | 2 retries |
 | Inactivity pause | Pauses heartbeat when you're away | 60 min |
 | Working hours | Pauses outside hours, auto-resumes | Off |
@@ -229,7 +232,7 @@ A single Claude Code session runs $5-15/day. Yunomia runs 4-6x that for multi-ag
 
 ## Status
 
-**Current version: v1.2.0** - fully functional, 5 rounds of red-team review, actively in use.
+**Current version: v1.2.1** - fully functional, 6 rounds of red-team review (risk score 14/125), actively in use.
 
 ## Roadmap
 
@@ -276,4 +279,4 @@ MIT
 
 ---
 
-Built by [Peter Haddad](https://github.com/phaddad90). Designed with Claude Opus 4.6. Five rounds of red-team review (20+ specialist critics) across token economics, architecture, UX, chaos engineering, and security.
+Built by [Peter Haddad](https://github.com/phaddad90). Designed with Claude Opus 4.6. Six rounds of red-team review. Risk score: 14/125.

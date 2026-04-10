@@ -4,6 +4,34 @@ All notable changes to Yunomia are documented here.
 
 ---
 
+## v1.2.1 - 2026-04-10
+
+### New Features
+- **Onboarding screen** - full-screen setup form on first run. Project name, mission, goals, preset selector, model selector. Shows automatically when PROJECT.md is blank.
+- **Editable PROJECT.md, SOUL.md, GOALS.md** - inline editors in the Status tab. Edit and save without leaving the dashboard.
+- **Project total cost (all-time)** - scans all metrics files across every session. Shows lifetime cost, tasks completed/failed, workers spawned, total sessions. First card in Status tab.
+- **CEO autonomy** - SOUL.md now includes "Decision Making" section. CEO must decide and act, never present numbered options to the human.
+- **Network status** - red "OFFLINE" indicator in status bar on disconnect. Browser online/offline detection. Auto-reconnect with banner feedback.
+- **Live running cost per task** - active tasks show "$X.XX running" in amber, updated every 5 seconds from agent cost data.
+
+### Worker Reliability
+- **3-stage stall detection** - nudge at 2 min silence ("you appear stalled, continue or write what you have"), kill at 5 min silence, hard timeout at 15 min. Active workers producing tokens run until hard timeout.
+- **Worker timeout bumped 30 -> 60 min** - Opus tasks on real codebases need more time. Per-task `maxRuntimeMinutes` override available.
+- **Heartbeat never backs off while workers active** - was doubling interval even when workers were running. CEO now stays on base interval whenever there's active work.
+- **Worker auto-completion** - when a worker finishes naturally, task automatically marked done with token count, duration, and cost.
+- **Nudge resets on recovery** - workers that recover from a stall get fresh nudge cycles if they stall again.
+
+### Bug Fixes
+- **Completed-task race condition** - worker completes naturally, session deleted, health loop marks task failed before completion callback runs. Fixed: await callback before deleting session.
+- **Sleep screen not showing** - copy button event listener was attached before overlay was in the DOM, causing null reference. Fixed: insert overlay first, then attach listener.
+- **Terminal auto-scroll** - scrollToBottom() after every write for CEO and worker terminals.
+- **Onboarding input validation** - project name max 200, mission max 2000, goals max 2000, model validated against allowlist.
+
+### Red Team
+- **Round 6** - risk score 14/125 (down from 16). All new features reviewed. Two bugs found and fixed (race condition, nudge reset).
+
+---
+
 ## v1.2.0 - 2026-04-10
 
 ### Renamed: Eunomia -> Yunomia
