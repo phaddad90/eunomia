@@ -731,7 +731,10 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
 
   const lastKnownCost = new Map<string, number>();
   const lastKnownTokens = new Map<string, { tokens: number; time: number }>();
-  const STALL_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes with 0 new tokens = stalled
+  const nudgedWorkers = new Set<string>(); // track which workers have been nudged
+  const NUDGE_THRESHOLD_MS = 2 * 60 * 1000;  // 2 min no tokens = nudge
+  const STALL_THRESHOLD_MS = 5 * 60 * 1000;  // 5 min no tokens = kill
+  const HARD_TIMEOUT_MS = 15 * 60 * 1000;    // 15 min total = hard kill regardless
 
   adapter.setOnCostUpdate((agentId, costUsd, tokensInput, tokensOutput) => {
     const previous = lastKnownCost.get(agentId) || 0;
@@ -820,22 +823,32 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
   const CEO_CRASH_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
   setInterval(async () => {
-    // Worker health check: stall detection + hard timeout
+    // Worker health check: 3-stage (nudge 2min, kill 5min, hard timeout 15min)
     for (const session of adapter.getActiveSessions('worker')) {
       const startTime = new Date(session.info.startedAt).getTime();
-      const task = session.taskId ? tasks.getTask(session.taskId) : undefined;
-
-      // Check for stall: 0 new tokens in STALL_THRESHOLD_MS
+      const elapsed = Date.now() - startTime;
       const activity = lastKnownTokens.get(session.id);
-      const isStalled = activity
-        ? (Date.now() - activity.time > STALL_THRESHOLD_MS)
-        : (Date.now() - startTime > STALL_THRESHOLD_MS); // no activity record = no tokens ever
+      const silentMs = activity ? (Date.now() - activity.time) : elapsed;
 
-      // Kill if stalled OR hard timeout exceeded
-      const timedOut = safety.isWorkerTimedOut(startTime, task?.maxRuntimeMinutes);
-      const reason = isStalled ? 'stalled (no tokens for 5min)' : 'hard timeout';
+      // Stage 1: Nudge at 2 min silence
+      if (silentMs > NUDGE_THRESHOLD_MS && !nudgedWorkers.has(session.id)) {
+        nudgedWorkers.add(session.id);
+        logger.info({ agentId: session.id, silentSec: Math.round(silentMs / 1000) }, 'Nudging stalled worker');
+        adapter.sendMessage(session.id, 'You appear to be stalled. If you are working, continue. If you are stuck, write what you have to the output directory and stop.').catch(() => {});
+        continue; // give it a chance to respond before killing
+      }
 
-      if (isStalled || timedOut) {
+      // Stage 2: Kill at 5 min silence
+      const isStalled = silentMs > STALL_THRESHOLD_MS;
+
+      // Stage 3: Hard timeout (15 min default, or per-task override)
+      const task = session.taskId ? tasks.getTask(session.taskId) : undefined;
+      const hardTimeoutMs = task?.maxRuntimeMinutes ? task.maxRuntimeMinutes * 60 * 1000 : HARD_TIMEOUT_MS;
+      const hardTimeout = elapsed > hardTimeoutMs;
+
+      const reason = isStalled ? `stalled (no tokens for ${Math.round(silentMs / 60000)}min)` : hardTimeout ? `hard timeout (${Math.round(elapsed / 60000)}min)` : null;
+
+      if (reason) {
         logger.warn({ agentId: session.id, taskId: session.taskId, reason }, `Worker killed: ${reason}`);
         try {
           // Capture info before kill
@@ -862,9 +875,10 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
             });
           }
 
-          // Clean up token tracking
+          // Clean up tracking
           lastKnownTokens.delete(session.id);
           lastKnownCost.delete(session.id);
+          nudgedWorkers.delete(session.id);
 
           if (session.taskId) {
             const current = tasks.getTask(session.taskId);

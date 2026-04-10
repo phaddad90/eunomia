@@ -946,22 +946,27 @@ function showSleepScreen() {
     </div>
   `;
 
-  document.getElementById('copy-btn').addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(restartCmd);
-      document.getElementById('copy-btn').textContent = '\u2713';
-      document.getElementById('copy-btn').style.opacity = '1';
-      document.getElementById('copy-btn').style.color = '#22c55e';
-      setTimeout(() => {
-        const btn = document.getElementById('copy-btn');
-        if (btn) { btn.textContent = '\u2398'; btn.style.opacity = '0.6'; btn.style.color = ''; }
-      }, 2000);
-    } catch { /* clipboard API may fail */ }
-  });
-
-  // Insert after tabs
+  // Insert overlay into DOM FIRST, then attach event listener
   const statusBar = document.querySelector('.status-bar');
   statusBar.parentNode.insertBefore(overlay, statusBar);
+
+  // Now the copy button exists in the DOM
+  const copyBtn = document.getElementById('copy-btn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(restartCmd);
+        copyBtn.textContent = '\u2713';
+        copyBtn.style.opacity = '1';
+        copyBtn.style.color = '#22c55e';
+        setTimeout(() => {
+          copyBtn.textContent = '\u2398';
+          copyBtn.style.opacity = '0.6';
+          copyBtn.style.color = '';
+        }, 2000);
+      } catch { /* clipboard API may fail */ }
+    });
+  }
 
   // Update status bar
   const dot = document.getElementById('ceo-dot');
