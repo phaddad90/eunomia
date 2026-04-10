@@ -94,10 +94,10 @@ function initTerminals() {
   ceoTerminal.loadAddon(ceoFitAddon);
   ceoTerminal.open(document.getElementById('terminal-ceo'));
 
-  // Fit after layout settles
-  requestAnimationFrame(() => {
+  // Fit after layout settles (double-rAF ensures paint has happened)
+  requestAnimationFrame(() => requestAnimationFrame(() => {
     ceoFitAddon.fit();
-  });
+  }));
 
   ceoTerminal.writeln('\x1b[1;35m  Eunomia CEO Terminal\x1b[0m');
   ceoTerminal.writeln('\x1b[90m  Waiting for CEO agent to start...\x1b[0m\r\n');
@@ -138,11 +138,7 @@ function handleTerminalOutput(agentId, data) {
 function createWorkerTerminal(agentId) {
   const container = document.createElement('div');
   container.id = `terminal-${agentId}`;
-  container.style.position = 'absolute';
-  container.style.top = '4px';
-  container.style.bottom = '0';
-  container.style.left = '20px';
-  container.style.right = '20px';
+  container.className = 'terminal-wrapper';
   // Temporarily visible for fit measurement
   document.querySelector('.terminal-main').appendChild(container);
 

@@ -147,13 +147,12 @@ body {
 
 .terminal-main {
   flex: 1;
-  position: relative;
   min-height: 0;
   overflow: hidden;
+  position: relative;
 }
 
-#terminal-ceo,
-[id^="terminal-"] {
+.terminal-main > .terminal-wrapper {
   position: absolute;
   top: 4px;
   bottom: 0;
