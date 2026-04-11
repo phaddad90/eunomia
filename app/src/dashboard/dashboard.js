@@ -481,6 +481,19 @@ function handleAgentStatus(agentId, data) {
     else if (data.status === 'stopped') dot.className = 'dot stopped';
     else if (data.status === 'crashed') dot.className = 'dot failed';
   }
+
+  // Dispose worker terminal after completion (60s delay to allow reading output)
+  if (data.status === 'stopped' || data.status === 'crashed') {
+    setTimeout(() => {
+      const w = workerTerminals[agentId];
+      if (w) {
+        w.terminal.dispose();
+        w.container.remove();
+        delete workerTerminals[agentId];
+        if (activeTerminal === agentId) showCeoTerminal();
+      }
+    }, 60000);
+  }
 }
 
 function handleSafetyAlert(data) {

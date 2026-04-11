@@ -6,7 +6,7 @@ import type { MetricsCollector } from './metrics.js';
 import type { ModelChoice, TaskPriority } from './types.js';
 import type { Logger } from 'pino';
 import { join } from 'path';
-import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'fs';
+import { mkdirSync, writeFileSync, existsSync, readFileSync, readdirSync as fsReaddirSync, copyFileSync } from 'fs';
 import { listSkills, runSkill } from './skills.js';
 
 /**
@@ -95,7 +95,7 @@ export class McpServer {
           properties: {
             status: {
               type: 'string',
-              enum: ['planned', 'active', 'done', 'failed'],
+              enum: ['planned', 'scheduled', 'active', 'done', 'failed', 'pulled'],
               description: 'Filter by status. Omit for all tasks.',
             },
           },
@@ -326,11 +326,11 @@ export class McpServer {
         const depOutputDir = join(this.projectPath, 'workers', depId, 'output');
         if (existsSync(depOutputDir)) {
           try {
-            const files = require('fs').readdirSync(depOutputDir) as string[];
+            const files = fsReaddirSync(depOutputDir);
             for (const file of files) {
               const src = join(depOutputDir, file);
               const dest = join(inputDir, `${depId}-${file}`);
-              require('fs').copyFileSync(src, dest);
+              copyFileSync(src, dest);
             }
             this.logger.info({ taskId, depId, files: files.length }, 'Copied dependency output to worker input');
           } catch { /* ignore copy errors */ }
@@ -340,7 +340,7 @@ export class McpServer {
 
     // Sanitize task content for SOUL.md (prevent heading injection / stuffing)
     const sanitizedTitle = (task.title || '').slice(0, 200).replace(/[#\n]/g, ' ');
-    const sanitizedDesc = (task.description || '').slice(0, 500).replace(/[#]/g, '');
+    const sanitizedDesc = (task.description || '').slice(0, 500).replace(/[#\n\r]/g, ' ').trim();
 
     // Build project context for the worker
     let projectContext = '';

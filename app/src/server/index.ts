@@ -375,6 +375,7 @@ ${goals || '- [ ] [Goal 1]\n- [ ] [Goal 2]\n- [ ] [Goal 3]'}
     safety.recordHumanInteraction();
     const { content } = req.body;
     if (!content || typeof content !== 'string') return res.status(400).json({ error: 'Content required' });
+    if (content.length > 10000) return res.status(400).json({ error: 'Content max 10000 characters' });
     writeFileSync(join(config.projectPath, 'ceo', 'SOUL.md'), content, 'utf-8');
     res.json({ saved: true });
   });
@@ -389,6 +390,7 @@ ${goals || '- [ ] [Goal 1]\n- [ ] [Goal 2]\n- [ ] [Goal 3]'}
     safety.recordHumanInteraction();
     const { content } = req.body;
     if (!content || typeof content !== 'string') return res.status(400).json({ error: 'Content required' });
+    if (content.length > 10000) return res.status(400).json({ error: 'Content max 10000 characters' });
     writeFileSync(join(config.projectPath, 'ceo', 'GOALS.md'), content, 'utf-8');
     res.json({ saved: true });
   });
@@ -455,7 +457,7 @@ ${goals || '- [ ] [Goal 1]\n- [ ] [Goal 2]\n- [ ] [Goal 3]'}
     const health: HealthResponse = {
       version: process.env.npm_package_version || '1.0.0',
       project: config.projectPath,
-      status: safety.isPaused() ? 'degraded' : 'ok',
+      status: safety.isPaused() || !adapter.getCeoSession() || safety.isBudgetExhausted() ? 'degraded' : 'ok',
       uptime: Math.floor(process.uptime()),
       ceo: {
         status: ceo?.status || 'not_started',
@@ -513,7 +515,18 @@ ${goals || '- [ ] [Goal 1]\n- [ ] [Goal 2]\n- [ ] [Goal 3]'}
   app.patch('/api/tasks/:id', async (req, res) => {
     safety.recordHumanInteraction();
     metrics.record('human_interaction', { action: 'update_task' });
-    const task = await tasks.updateTask(req.params.id, req.body);
+    // Whitelist allowed fields
+    const allowed: Record<string, unknown> = {};
+    const validStatuses = ['planned', 'scheduled', 'active', 'done', 'failed', 'pulled'];
+    const validPriorities = ['low', 'medium', 'high', 'critical'];
+    const validModels = ['opus', 'sonnet', 'haiku'];
+    if (req.body.status && validStatuses.includes(req.body.status)) allowed.status = req.body.status;
+    if (req.body.priority && validPriorities.includes(req.body.priority)) allowed.priority = req.body.priority;
+    if (req.body.model && validModels.includes(req.body.model)) allowed.model = req.body.model;
+    if (typeof req.body.notes === 'string') allowed.notes = req.body.notes.slice(0, 1000);
+    if (typeof req.body.maxBudgetUsd === 'number' && req.body.maxBudgetUsd > 0 && req.body.maxBudgetUsd <= 50) allowed.maxBudgetUsd = req.body.maxBudgetUsd;
+    if (typeof req.body.retryCount === 'number' && req.body.retryCount >= 0) allowed.retryCount = req.body.retryCount;
+    const task = await tasks.updateTask(req.params.id, allowed);
     if (!task) return res.status(404).json({ error: 'Task not found' });
     heartbeat.notifyTaskChange();
     broadcast({ type: 'tasks_updated', data: tasks.getState(), timestamp: new Date().toISOString() });
@@ -773,6 +786,11 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
       try {
         const msg = JSON.parse(raw.toString());
         if (msg.type === 'prompt' && typeof msg.message === 'string' && msg.message.length <= 8000) {
+          // Server-side rate limit on WS prompts (matches HTTP limiter)
+          const now = Date.now();
+          const wsAny = ws as unknown as Record<string, number>;
+          if (wsAny._lastPrompt && now - wsAny._lastPrompt < 5000) return;
+          wsAny._lastPrompt = now;
           safety.recordHumanInteraction();
           const ceo = adapter.getCeoSession();
           if (ceo) {
@@ -879,16 +897,20 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
       // Verify output directory has files
       const outputDir = join(config.projectPath, 'workers', taskId, 'output');
       let hasOutput = false;
+      let outputFiles: string[] = [];
       try {
         if (existsSync(outputDir)) {
-          const files = readdirSync(outputDir);
-          hasOutput = files.length > 0;
+          outputFiles = readdirSync(outputDir).filter(f => {
+            // Check file is non-empty (Fix #20: empty files don't count)
+            try { return require('fs').statSync(join(outputDir, f)).size > 0; } catch { return false; }
+          });
+          hasOutput = outputFiles.length > 0;
         }
       } catch { /* ignore */ }
 
       const status = hasOutput ? 'done' : 'failed';
       const notes = hasOutput
-        ? `Completed in ${Math.round(info.runtime / 60000)}m, $${info.costUsd.toFixed(2)}, ${readdirSync(outputDir).length} files`
+        ? `Completed in ${Math.round(info.runtime / 60000)}m, $${info.costUsd.toFixed(2)}, ${outputFiles.length} files`
         : `Worker finished but produced no output files ($${info.costUsd.toFixed(2)})`;
 
       await tasks.updateTask(taskId, {
@@ -908,19 +930,25 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
       });
       heartbeat.notifyTaskChange();
       broadcast({ type: 'tasks_updated', data: tasks.getState(), timestamp: new Date().toISOString() });
+      // Clean up tracking for this worker
+      nudgedWorkers.delete(agentId);
+      lastKnownTokens.delete(agentId);
+      lastKnownCost.delete(agentId);
       logger.info({ taskId, agentId, cost: info.costUsd.toFixed(2), hasOutput }, `Worker completed - ${status}`);
 
-      // Git auto-commit on successful completion
+      // Git auto-commit on successful completion (scoped to worker output only)
       if (hasOutput) {
         try {
-          const { execSync } = require('child_process') as typeof import('child_process');
+          const { execFileSync } = await import('child_process');
+          const opts = { cwd: config.projectPath, stdio: 'ignore' as const };
           // Check if project is a git repo
-          execSync('git rev-parse --git-dir', { cwd: config.projectPath, stdio: 'ignore' });
-          // Stage and commit worker output
-          execSync(`git add -A`, { cwd: config.projectPath, stdio: 'ignore' });
+          execFileSync('git', ['rev-parse', '--git-dir'], opts);
+          // Stage ONLY the worker's output directory (not the entire project)
+          execFileSync('git', ['add', `workers/${taskId}/output/`], opts);
+          // Commit with safe argument passing (no shell interpolation)
           const taskObj = tasks.getTask(taskId);
           const msg = `[Yunomia] ${taskObj?.title || taskId} - completed by ${agentId}`;
-          execSync(`git commit -m "${msg.replace(/"/g, '\\"')}" --allow-empty`, { cwd: config.projectPath, stdio: 'ignore' });
+          execFileSync('git', ['commit', '-m', msg, '--allow-empty'], opts);
           logger.info({ taskId }, 'Git auto-commit after worker completion');
         } catch {
           // Not a git repo or commit failed - non-fatal
@@ -973,6 +1001,7 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
   const CEO_CRASH_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
   setInterval(async () => {
+   try {
     // Worker health check: 3-stage (nudge 2min, kill 5min, hard timeout 15min)
     for (const session of adapter.getActiveSessions('worker')) {
       const startTime = new Date(session.info.startedAt).getTime();
@@ -1160,6 +1189,9 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
       },
       timestamp: new Date().toISOString(),
     });
+   } catch (err) {
+    logger.error({ err }, 'Health loop error');
+   }
   }, 30000);
 
   // ─── Start CEO ───
@@ -1223,6 +1255,12 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
 
   async function shutdown(signal: string) {
     logger.info({ signal }, 'Shutdown initiated');
+
+    // Hard ceiling: force exit after 30 seconds
+    const hardExit = setTimeout(() => {
+      logger.error('Shutdown timeout - forcing exit');
+      process.exit(1);
+    }, 30000);
 
     // 1. Stop heartbeat
     heartbeat.stop();
@@ -1300,6 +1338,13 @@ Write a "Lessons Learned" entry to MEMORY.md per your SOUL.md daily review instr
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('uncaughtException', (err) => {
+    logger.error({ err }, 'Uncaught exception');
+    shutdown('uncaughtException');
+  });
+  process.on('unhandledRejection', (err) => {
+    logger.error({ err }, 'Unhandled rejection');
+  });
 
   // ─── Start Server ───
 

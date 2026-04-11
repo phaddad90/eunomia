@@ -295,6 +295,7 @@ export class AgentAdapter {
         const ft = this.firstTokenTimers.get(session.id);
         if (ft) { clearTimeout(ft); this.firstTokenTimers.delete(session.id); }
         this.sessions.delete(session.id);
+        // Note: nudgedWorkers is in index.ts - cleaned up via onWorkerCompleted callback
       }
     } catch (err) {
       if (session.status === 'running') {

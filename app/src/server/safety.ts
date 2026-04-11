@@ -9,7 +9,7 @@ export class SafetyModule {
   private dailySpendDate = new Date().toISOString().split('T')[0];
   private lastHumanInteraction = Date.now();
   private paused = false;
-  private pendingApprovals = new Map<string, { task: Task; resolve: (approved: boolean) => void }>();
+  private pendingApprovals = new Map<string, { task: Task; resolve: (approved: boolean) => void; timer: ReturnType<typeof setTimeout> }>();
   private onDayReset?: () => void;
 
   constructor(config: SafetyConfig, logger: Logger) {
@@ -140,18 +140,26 @@ export class SafetyModule {
         }
       }
 
-      // Sandboxed Bash: allow but restrict working directory
+      // Sandboxed Bash: allowlist of safe commands only
       if (tool === 'Bash') {
-        const command = (input.command as string) || '';
-        // Block dangerous commands that could affect the system
-        const blocked = ['rm -rf /', 'sudo', 'chmod 777', 'mkfs', 'dd if=', '> /dev/', 'curl.*|.*sh', 'wget.*|.*sh'];
-        for (const pattern of blocked) {
-          if (new RegExp(pattern, 'i').test(command)) {
-            this.logger.warn({ tool, command: command.slice(0, 100) }, 'Worker Bash blocked - dangerous command');
-            return { behavior: 'deny' };
-          }
+        const command = ((input.command as string) || '').trim();
+        const firstWord = command.split(/[\s;|&]/)[0].replace(/^.*\//, ''); // extract binary name
+
+        const ALLOWED_COMMANDS = new Set([
+          'cat', 'ls', 'find', 'grep', 'rg', 'head', 'tail', 'wc', 'sort', 'uniq', 'diff',
+          'echo', 'printf', 'test', '[', 'true', 'false',
+          'mkdir', 'cp', 'mv', 'touch', 'basename', 'dirname', 'realpath',
+          'npm', 'npx', 'node', 'tsx', 'tsc', 'pnpm', 'yarn', 'bun',
+          'git', 'curl', 'wget', 'tar', 'unzip', 'gzip',
+          'python', 'python3', 'pip', 'pip3',
+          'sed', 'awk', 'tr', 'cut', 'jq',
+          'date', 'env', 'which', 'whoami', 'pwd',
+        ]);
+
+        if (!ALLOWED_COMMANDS.has(firstWord)) {
+          this.logger.warn({ tool, command: command.slice(0, 100), firstWord }, 'Worker Bash blocked - command not in allowlist');
+          return { behavior: 'deny' };
         }
-        // Allow Bash - the worker's cwd is already set to workerDir by the spawn config
         return { behavior: 'allow' };
       }
 
@@ -288,17 +296,16 @@ export class SafetyModule {
 
   requestApproval(task: Task): Promise<boolean> {
     return new Promise((resolve) => {
-      this.pendingApprovals.set(task.id, { task, resolve });
-      this.logger.info({ taskId: task.id, title: task.title }, 'Spawn approval requested');
-
-      // 10-minute timeout - auto-reject if no response
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         if (this.pendingApprovals.has(task.id)) {
           this.pendingApprovals.delete(task.id);
           this.logger.warn({ taskId: task.id }, 'Spawn approval timed out - auto-rejected');
           resolve(false);
         }
       }, 10 * 60 * 1000);
+
+      this.pendingApprovals.set(task.id, { task, resolve, timer });
+      this.logger.info({ taskId: task.id, title: task.title }, 'Spawn approval requested');
     });
   }
 
@@ -309,6 +316,7 @@ export class SafetyModule {
   resolveApproval(taskId: string, approved: boolean): void {
     const pending = this.pendingApprovals.get(taskId);
     if (pending) {
+      clearTimeout(pending.timer);
       pending.resolve(approved);
       this.pendingApprovals.delete(taskId);
       this.logger.info({ taskId, approved }, 'Spawn approval resolved');
