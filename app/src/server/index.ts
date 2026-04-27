@@ -131,13 +131,13 @@ async function main() {
   // ─── Ticket transitions ───
 
   app.post('/api/board/tickets/:id/start', async (req, res) => {
-    try { res.json({ ticket: await board.start(req.params.id) }); broadcast({ type: 'tickets_changed', data: { reason: 'start' } }); } catch (err) { handleErr(res, err); }
+    try { res.json(await board.start(req.params.id)); broadcast({ type: 'tickets_changed', data: { reason: 'start' } }); } catch (err) { handleErr(res, err); }
   });
   app.post('/api/board/tickets/:id/handoff', async (req, res) => {
-    try { res.json({ ticket: await board.handoff(req.params.id) }); broadcast({ type: 'tickets_changed', data: { reason: 'handoff' } }); } catch (err) { handleErr(res, err); }
+    try { res.json(await board.handoff(req.params.id)); broadcast({ type: 'tickets_changed', data: { reason: 'handoff' } }); } catch (err) { handleErr(res, err); }
   });
   app.post('/api/board/tickets/:id/done', async (req, res) => {
-    try { res.json({ ticket: await board.done(req.params.id) }); broadcast({ type: 'tickets_changed', data: { reason: 'done' } }); } catch (err) { handleErr(res, err); }
+    try { res.json(await board.done(req.params.id)); broadcast({ type: 'tickets_changed', data: { reason: 'done' } }); } catch (err) { handleErr(res, err); }
   });
   app.post('/api/board/tickets/:id/comments', async (req, res) => {
     try {
@@ -154,9 +154,9 @@ async function main() {
       const allowed: Record<string, unknown> = {};
       const fields = ['status', 'assignee_agent', 'audience', 'title', 'body_md', 'type'];
       for (const f of fields) if (req.body?.[f] !== undefined) allowed[f] = req.body[f];
-      const ticket = await board.patch(req.params.id, allowed);
+      const result = await board.patch(req.params.id, allowed as Partial<import('./types.js').Ticket>);
       broadcast({ type: 'tickets_changed', data: { reason: 'patch' } });
-      res.json({ ticket });
+      res.json(result);
     } catch (err) { handleErr(res, err); }
   });
 

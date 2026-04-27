@@ -1,4 +1,4 @@
-import type { AgentCode, AuditRow, Ticket, TicketAudience, TicketComment, TicketType } from './types.js';
+import type { AgentCode, AuditRow, Ticket, TicketAudience, TicketComment, TicketStatus, TicketType } from './types.js';
 
 export class BoardError extends Error {
   status: number;
@@ -83,11 +83,12 @@ export class PrintPepperBoardClient {
     assignee_agent?: AgentCode | null;
     status?: string;
   }): Promise<Ticket> {
+    // API uses camelCase `bodyMd` on writes; reads return `body_md`.
     const r = await this.req<{ ticket: Ticket }>(`/api/admin/tickets`, {
       method: 'POST',
       body: JSON.stringify({
         title: input.title,
-        body_md: input.body_md,
+        bodyMd: input.body_md,
         type: input.type || 'ops',
         audience: input.audience,
         assignee_agent: input.assignee_agent ?? 'CEO',
@@ -100,31 +101,26 @@ export class PrintPepperBoardClient {
   async postComment(ticketId: string, body_md: string): Promise<TicketComment> {
     const r = await this.req<{ comment: TicketComment }>(`/api/admin/tickets/${encodeURIComponent(ticketId)}/comments`, {
       method: 'POST',
-      body: JSON.stringify({ body_md }),
+      body: JSON.stringify({ bodyMd: body_md }),
     });
     return r.comment;
   }
 
-  async start(ticketId: string): Promise<Ticket> {
-    const r = await this.req<{ ticket: Ticket }>(`/api/admin/tickets/${encodeURIComponent(ticketId)}/start`, { method: 'POST' });
-    return r.ticket;
+  // Fast-path transitions return `{ success, status, alreadyDone? }`, not a full ticket.
+  async start(ticketId: string): Promise<{ status: TicketStatus | 'in_progress'; success: boolean }> {
+    return this.req(`/api/admin/tickets/${encodeURIComponent(ticketId)}/start`, { method: 'POST' });
+  }
+  async handoff(ticketId: string): Promise<{ status: TicketStatus | 'in_review'; success: boolean }> {
+    return this.req(`/api/admin/tickets/${encodeURIComponent(ticketId)}/handoff`, { method: 'POST' });
+  }
+  async done(ticketId: string): Promise<{ status?: TicketStatus | 'done'; success: boolean; alreadyDone?: boolean }> {
+    return this.req(`/api/admin/tickets/${encodeURIComponent(ticketId)}/done`, { method: 'POST' });
   }
 
-  async handoff(ticketId: string): Promise<Ticket> {
-    const r = await this.req<{ ticket: Ticket }>(`/api/admin/tickets/${encodeURIComponent(ticketId)}/handoff`, { method: 'POST' });
-    return r.ticket;
-  }
-
-  async done(ticketId: string): Promise<Ticket> {
-    const r = await this.req<{ ticket: Ticket }>(`/api/admin/tickets/${encodeURIComponent(ticketId)}/done`, { method: 'POST' });
-    return r.ticket;
-  }
-
-  async patch(ticketId: string, fields: Partial<Ticket>): Promise<Ticket> {
-    const r = await this.req<{ ticket: Ticket }>(`/api/admin/tickets/${encodeURIComponent(ticketId)}`, {
+  async patch(ticketId: string, fields: Partial<Ticket>): Promise<{ success: boolean }> {
+    return this.req(`/api/admin/tickets/${encodeURIComponent(ticketId)}`, {
       method: 'PATCH',
       body: JSON.stringify(fields),
     });
-    return r.ticket;
   }
 }
