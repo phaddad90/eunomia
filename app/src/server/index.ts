@@ -11,7 +11,10 @@ import { PrintPepperBoardClient, BoardError } from './board-client.js';
 import { AuditPoller } from './audit-poller.js';
 import { deriveAgentStates } from './agent-state.js';
 import { AGENT_LIST } from './types.js';
-import type { AgentCode, MissionConfig, WsMessage } from './types.js';
+import { InboxStore, shouldNotifyCeo, summaryFor } from './inbox.js';
+import type { InboxEntry, NormalizedEvent } from './inbox.js';
+import { Notifier } from './notifier.js';
+import type { AgentCode, AuditRow, MissionConfig, Ticket, WsMessage } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -57,6 +60,53 @@ async function main() {
   logger.info({ port: config.port, apiBase: config.apiBase, agent: config.agentCode }, 'Mission Control starting');
 
   const board = new PrintPepperBoardClient(config.apiBase, config.agentToken, config.agentCode);
+  const inbox = new InboxStore(undefined, logger);
+  inbox.init();
+  const notifier = new Notifier(logger);
+
+  // Cache ticket lookups during a single tick to avoid hammering the API
+  const ticketCache = new Map<string, { assignee_agent: AgentCode | null; audience: string; status: string; title: string }>();
+  const fetchTicket = async (id: string) => {
+    if (ticketCache.has(id)) return ticketCache.get(id)!;
+    try {
+      const r = await board.getTicket(id);
+      const t = r.ticket;
+      const lite = { assignee_agent: t.assignee_agent, audience: t.audience, status: t.status, title: t.title };
+      ticketCache.set(id, lite);
+      // expire after 30s — enough to coalesce a burst, short enough not to mask updates
+      setTimeout(() => ticketCache.delete(id), 30_000);
+      return lite;
+    } catch {
+      return null;
+    }
+  };
+
+  /**
+   * Run a board event through the CEO inbox filter. If relevant and new, append +
+   * notify + broadcast. Used by both the audit poller and the webhook receiver.
+   */
+  async function processForInbox(evt: NormalizedEvent): Promise<void> {
+    if (inbox.has(evt.delivery_id)) return;
+    const verdict = await shouldNotifyCeo(evt, fetchTicket);
+    if (!verdict.relevant) return;
+    const summary = summaryFor(evt, verdict.ticket);
+    const entry: InboxEntry = {
+      delivery_id: evt.delivery_id,
+      source: evt.source,
+      event: evt.action,
+      ticket_id: evt.ticket_id,
+      ticket_human_id: evt.ticket_human_id,
+      actor: evt.actor,
+      ts: evt.ts,
+      summary,
+      processed: false,
+    };
+    if (inbox.append(entry)) {
+      notifier.notify(summary);
+      broadcast({ type: 'inbox_changed', data: { unprocessed: inbox.unprocessedCount() } });
+      logger.info({ delivery_id: evt.delivery_id, action: evt.action, summary }, 'inbox event written');
+    }
+  }
 
   // ─── Express ───
 
@@ -212,12 +262,31 @@ async function main() {
       const evt = JSON.parse(raw.toString('utf-8'));
       logger.info({ action: evt?.action }, 'webhook event');
       broadcast({ type: 'tickets_changed', data: { reason: 'webhook' } });
+      const normalized = normalizeWebhookEvent(evt, req.header('x-pp-delivery-id') || sig);
+      if (normalized) void processForInbox(normalized);
     } catch { /* ignore bad payloads */ }
     res.json({ ok: true });
   });
 
+  // ─── CEO inbox (file-backed) ───
+
+  app.get('/api/inbox', (_req, res) => {
+    res.json({
+      entries: inbox.list(),
+      unprocessed: inbox.unprocessedCount(),
+    });
+  });
+
+  app.post('/api/inbox/processed', (req, res) => {
+    const ids = Array.isArray(req.body?.delivery_ids) ? req.body.delivery_ids.map(String) : [];
+    if (!ids.length) return res.status(400).json({ error: 'delivery_ids required' });
+    const added = inbox.markProcessed(ids);
+    broadcast({ type: 'inbox_changed', data: { unprocessed: inbox.unprocessedCount() } });
+    res.json({ marked: added, unprocessed: inbox.unprocessedCount() });
+  });
+
   // Health
-  app.get('/health', (_req, res) => res.json({ status: 'ok', agent: config.agentCode, apiBase: config.apiBase }));
+  app.get('/health', (_req, res) => res.json({ status: 'ok', agent: config.agentCode, apiBase: config.apiBase, inbox: inbox.unprocessedCount() }));
 
   // ─── HTTP + WS ───
 
@@ -245,7 +314,10 @@ async function main() {
     board,
     config.auditPollMs,
     logger,
-    (row) => broadcast({ type: 'audit_event', data: row }),
+    (row) => {
+      broadcast({ type: 'audit_event', data: row });
+      void processForInbox(normalizeAuditRow(row));
+    },
     () => broadcast({ type: 'tickets_changed', data: { reason: 'audit' } }),
   );
   poller.start();
@@ -283,6 +355,45 @@ Read the body, references, and last 10 comments. Move to In Progress (POST /star
 
 Title: ${title}
 `;
+}
+
+function normalizeAuditRow(row: AuditRow): NormalizedEvent {
+  const d = row.details || {};
+  // For ticket.assigned, audit puts the new assignee in details.to (sometimes
+  // also details.assignee_agent for ticket.created). details.agent_id is the actor.
+  const newAssignee = (d.assignee_agent ?? d.to) as string | undefined;
+  return {
+    delivery_id: `audit:${row.id}`,
+    source: 'audit',
+    action: row.action,
+    ticket_id: (d.id as string | undefined) ?? (d.ticket_id as string | undefined) ?? null,
+    ticket_human_id: row.target,
+    actor: (d.agent_id as string | undefined) ?? row.actor_kind ?? null,
+    ts: row.created_at,
+    hint_assignee_agent: newAssignee ?? null,
+    hint_audience: (d.audience as string | undefined) ?? null,
+    hint_status: (d.status as string | undefined) ?? null,
+    hint_title: (d.title as string | undefined) ?? null,
+  };
+}
+
+function normalizeWebhookEvent(evt: Record<string, unknown>, deliveryId: string): NormalizedEvent | null {
+  const action = typeof evt.action === 'string' ? evt.action : null;
+  if (!action) return null;
+  const t = (evt.ticket || evt.data || {}) as Record<string, unknown>;
+  return {
+    delivery_id: `webhook:${deliveryId}`,
+    source: 'webhook',
+    action,
+    ticket_id: (t.id as string | undefined) ?? null,
+    ticket_human_id: (t.ticket_human_id as string | undefined) ?? (evt.target as string | undefined) ?? null,
+    actor: (evt.actor as string | undefined) ?? null,
+    ts: (evt.ts as string | undefined) ?? new Date().toISOString(),
+    hint_assignee_agent: (t.assignee_agent as string | undefined) ?? null,
+    hint_audience: (t.audience as string | undefined) ?? null,
+    hint_status: (t.status as string | undefined) ?? null,
+    hint_title: (t.title as string | undefined) ?? null,
+  };
 }
 
 function handleErr(res: express.Response, err: unknown): void {

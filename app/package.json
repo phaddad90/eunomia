@@ -7,6 +7,7 @@
     "build": "tsup",
     "dev": "node --import tsx src/server/index.ts",
     "start": "node dist/server/index.js",
+    "drain-inbox": "node --import tsx scripts/drain-inbox.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -38,6 +38,7 @@ const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
   bindUi();
   connectWs();
   await refreshBoard();
+  await refreshInbox();
 })();
 
 // ─── UI bindings ───
@@ -63,6 +64,11 @@ function bindUi() {
   $('#btn-screenshot').addEventListener('click', () => $('#file-input').click());
   $('#file-input').addEventListener('change', handleFileAttach);
   $('#btn-voice').addEventListener('click', toggleVoice);
+
+  // Inbox pill + modal
+  $('#inbox-pill').addEventListener('click', openInboxModal);
+  $('#inbox-mark-all').addEventListener('click', markAllInboxProcessed);
+  $$('#inbox-modal [data-close="1"]').forEach((el) => el.addEventListener('click', closeInboxModal));
 
   // Side panel
   $('#side-close').addEventListener('click', closeSidePanel);
@@ -92,6 +98,7 @@ function connectWs() {
       const msg = JSON.parse(e.data);
       if (msg.type === 'tickets_changed') refreshBoard();
       else if (msg.type === 'audit_event') prependActivity(msg.data);
+      else if (msg.type === 'inbox_changed') updateInboxPill(msg.data.unprocessed);
       else if (msg.type === 'toast') toast(msg.data.text, msg.data.kind);
     } catch { /* ignore */ }
   });
@@ -505,6 +512,89 @@ function toggleVoice() {
   recog.start();
   recogActive = true;
   $('#btn-voice').classList.add('btn-voice-on');
+}
+
+// ─── CEO inbox pill + modal ───
+
+async function refreshInbox() {
+  try {
+    const r = await fetch('/api/inbox').then((r) => r.json());
+    state.inbox = r;
+    updateInboxPill(r.unprocessed || 0);
+    if (!$('#inbox-modal').classList.contains('hidden')) renderInboxModal();
+  } catch { /* offline ok */ }
+}
+
+function updateInboxPill(n) {
+  const pill = $('#inbox-pill');
+  pill.hidden = false;
+  pill.dataset.zero = n > 0 ? '0' : '1';
+  $('#inbox-pill-count').textContent = n;
+  if (n > 0) document.title = `(${n}) Mission Control`;
+  else document.title = 'Mission Control — PrintPepper';
+}
+
+async function openInboxModal() {
+  await refreshInbox();
+  renderInboxModal();
+  $('#inbox-modal').classList.remove('hidden');
+}
+
+function closeInboxModal() {
+  $('#inbox-modal').classList.add('hidden');
+}
+
+function renderInboxModal() {
+  const data = state.inbox || { entries: [], unprocessed: 0 };
+  $('#inbox-modal-count').textContent = `${data.unprocessed} unprocessed`;
+  const ul = $('#inbox-list');
+  ul.innerHTML = '';
+  if (!data.entries || !data.entries.length) {
+    const li = document.createElement('li');
+    li.className = 'inbox-row processed';
+    li.innerHTML = `<div><div class="summary">No events yet — Drop a Note or wait for board activity.</div></div>`;
+    ul.appendChild(li);
+    return;
+  }
+  for (const e of data.entries) {
+    const li = document.createElement('li');
+    li.className = 'inbox-row' + (e.processed ? ' processed' : '');
+    li.innerHTML = `
+      <div>
+        <div class="summary">${escapeHtml(e.summary)}</div>
+        <div class="meta">${escapeHtml(e.event)} · ${formatTime(e.ts)} · ${escapeHtml(e.source)}${e.actor ? ' · ' + escapeHtml(e.actor) : ''}</div>
+      </div>
+      <div>
+        ${e.ticket_id ? `<button class="btn-ghost" data-open="${e.ticket_id}" type="button">Open</button>` : ''}
+        ${e.processed ? '<span class="ticket-pill admin">processed</span>' : `<button class="btn-secondary" data-mark="${e.delivery_id}" type="button">Mark processed</button>`}
+      </div>
+    `;
+    ul.appendChild(li);
+  }
+  $$('#inbox-list [data-mark]').forEach((b) => b.addEventListener('click', () => markInboxProcessed([b.dataset.mark])));
+  $$('#inbox-list [data-open]').forEach((b) => b.addEventListener('click', () => { closeInboxModal(); openTicket(b.dataset.open); }));
+}
+
+async function markInboxProcessed(ids) {
+  if (!ids.length) return;
+  try {
+    const r = await fetch('/api/inbox/processed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ delivery_ids: ids }),
+    });
+    if (!r.ok) throw new Error(`mark ${r.status}`);
+    await refreshInbox();
+  } catch (err) {
+    toast(String(err.message || err), 'error');
+  }
+}
+
+async function markAllInboxProcessed() {
+  const data = state.inbox || { entries: [] };
+  const ids = (data.entries || []).filter((e) => !e.processed).map((e) => e.delivery_id);
+  if (!ids.length) return;
+  await markInboxProcessed(ids);
 }
 
 // ─── Helpers ───

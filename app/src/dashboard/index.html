@@ -17,6 +17,10 @@
       <span class="brand-name">Mission Control</span>
       <span class="brand-sub">PrintPepper</span>
     </div>
+    <button id="inbox-pill" class="inbox-pill" type="button" hidden>
+      <span class="bell">🔔</span>
+      <span class="inbox-text">CEO Inbox: <b id="inbox-pill-count">0</b></span>
+    </button>
     <div class="conn">
       <span id="live-dot" class="live-dot" data-state="off"></span>
       <span id="live-label" class="live-label">connecting…</span>
@@ -149,6 +153,20 @@
       <button id="side-done" class="btn-secondary">Done</button>
     </footer>
   </aside>
+
+  <!-- CEO inbox modal -->
+  <div id="inbox-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close="1"></div>
+    <div class="modal-card">
+      <header>
+        <h3>CEO Inbox</h3>
+        <span id="inbox-modal-count" class="pill"></span>
+        <button id="inbox-mark-all" class="btn-secondary" type="button">Mark all processed</button>
+        <button class="btn-ghost" data-close="1" type="button">✕</button>
+      </header>
+      <ul id="inbox-list" class="inbox-list"></ul>
+    </div>
+  </div>
 
   <script src="/dashboard.js" type="module"></script>
 </body>

@@ -66,6 +66,7 @@ export type WsMessage =
   | { type: 'tickets_changed'; data: { reason: string } }
   | { type: 'audit_event'; data: AuditRow }
   | { type: 'agent_state'; data: AgentState[] }
+  | { type: 'inbox_changed'; data: { unprocessed: number } }
   | { type: 'toast'; data: { kind: 'info' | 'error' | 'success'; text: string } };
 
 export interface AgentState {
