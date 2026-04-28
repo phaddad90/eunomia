@@ -2,7 +2,7 @@ import express from 'express';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createServer } from 'http';
 import { join, dirname } from 'path';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 
@@ -17,7 +17,7 @@ import type { InboxEntry, NormalizedEvent } from './inbox.js';
 import { Notifier } from './notifier.js';
 import { EventEmitter } from './events.js';
 import { summariseCost } from './cost.js';
-import { buildKickoffPrompt, ALLOWED_AGENT_CODES_FOR_KICKOFF } from './kickoff.js';
+import { buildKickoffPrompt, ALLOWED_AGENT_CODES_FOR_KICKOFF, kickoffFilePath } from './kickoff.js';
 import { buildPrecompactPrompt, ALLOWED_AGENT_CODES_FOR_PRECOMPACT } from './precompact.js';
 import { AgentsKbClient } from './agents-kb-client.js';
 import { PresenceHeartbeat } from './presence-heartbeat.js';
@@ -294,19 +294,41 @@ async function main() {
 
   // ─── Kickoff prompts (PH-073) ───
 
-  app.get('/api/agents/:code/kickoff', async (req, res) => {
+  // PH-090 (re-scoped): kickoff prompts are file-backed Markdown at
+  // SaaS Architect/<AGENT>-kickoff.md. GET reads, POST writes. No platform
+  // DB dependency — MC owns the canonical source. If a file is missing on
+  // first read, fall back to buildKickoffPrompt() so the button never
+  // breaks; the operator should commit the file to make it persistent.
+  app.get('/api/agents/:code/kickoff', (req, res) => {
     const code = req.params.code.toUpperCase() as AgentCode;
     if (!ALLOWED_AGENT_CODES_FOR_KICKOFF.includes(code)) {
       return res.status(400).json({ error: 'unknown agent code' });
     }
-    // PH-090: try the platform DB first (single source of truth once SA's
-    // bundle deploys), fall back to the hardcoded template so the button
-    // never breaks during the deploy gap.
-    const live = await agentsKb.getKickoff(code);
-    if (live && live.length > 0) {
-      return res.json({ agentCode: code, prompt: live, source: 'db' });
+    const path = kickoffFilePath(code);
+    if (existsSync(path)) {
+      const prompt = readFileSync(path, 'utf-8');
+      return res.json({ agentCode: code, prompt, source: 'file', path });
     }
-    res.json({ agentCode: code, prompt: buildKickoffPrompt(code), source: 'hardcoded' });
+    res.json({ agentCode: code, prompt: buildKickoffPrompt(code), source: 'fallback', path });
+  });
+
+  app.post('/api/agents/:code/kickoff', (req, res) => {
+    const code = req.params.code.toUpperCase() as AgentCode;
+    if (!ALLOWED_AGENT_CODES_FOR_KICKOFF.includes(code)) {
+      return res.status(400).json({ error: 'unknown agent code' });
+    }
+    const prompt = req.body?.prompt;
+    if (typeof prompt !== 'string' || prompt.length === 0) {
+      return res.status(400).json({ error: 'prompt (string) required' });
+    }
+    if (prompt.length > 32_000) {
+      return res.status(400).json({ error: 'prompt max 32000 chars' });
+    }
+    const path = kickoffFilePath(code);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, prompt, 'utf-8');
+    logger.info({ code, bytes: prompt.length, path }, 'kickoff written');
+    res.json({ agentCode: code, written: prompt.length, path });
   });
 
   app.get('/api/agents/:code/precompact', (req, res) => {

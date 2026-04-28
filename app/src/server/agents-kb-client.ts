@@ -3,15 +3,16 @@ import type { PrintPepperBoardClient } from './board-client.js';
 import type { AgentCode } from './types.js';
 
 /**
- * Thin client + cache for SA's PH-090 agents knowledge-base endpoints.
+ * Thin client + cache for cross-machine soul lookup.
  *
- *   GET /api/admin/agents/[code]/kickoff — latest kickoff_md
- *   GET /api/admin/agents/[code]/soul    — latest soul_md
+ *   GET /api/admin/agents/[code]/soul — latest soul_md
  *
- * Until SA's bundle deploys, every fetch returns null; callers fall back
- * to today's hardcoded / file-based source. Once the deploy lands, the
- * next cache miss starts returning live data and the fallback path
- * quietly stops firing — no MC restart required.
+ * Kickoffs are MC-local file-backed (PH-090 re-scoped per CEO directive
+ * 2026-04-28: MC owns its own storage; no platform DB dependency for any
+ * MC asset). Soul stays here as a placeholder for the case where another
+ * agent terminal needs cross-machine read access to standing identity —
+ * if that endpoint never deploys, the soul handler in index.ts falls
+ * back to the local soul/resume markdown file.
  */
 
 interface CacheSlot<T> {
@@ -23,7 +24,6 @@ const POSITIVE_TTL_MS = 60_000;   // PH-090 spec: 60s positive cache
 const NEGATIVE_TTL_MS = 30_000;   // shorter negative cache while deploy is in flight
 
 export class AgentsKbClient {
-  private kickoffCache = new Map<string, CacheSlot<string>>();
   private soulCache = new Map<string, CacheSlot<string>>();
   private consecutiveFailures = 0;
   private quietAfter = 3;
@@ -33,15 +33,6 @@ export class AgentsKbClient {
     private logger: Logger,
   ) {}
 
-  /** Returns the kickoff_md from prod, or null if upstream is unavailable. */
-  async getKickoff(code: AgentCode): Promise<string | null> {
-    return this.cached(this.kickoffCache, code, async () => {
-      const r = await this.board.kbGetKickoff(code);
-      // Tolerate three plausible response shapes until the contract crystallises.
-      return (r.kickoff_md ?? r.agent?.kickoff_md ?? r.row?.kickoff_md) || null;
-    });
-  }
-
   /** Returns the soul_md from prod, or null if upstream is unavailable. */
   async getSoul(code: AgentCode): Promise<string | null> {
     return this.cached(this.soulCache, code, async () => {
@@ -50,9 +41,8 @@ export class AgentsKbClient {
     });
   }
 
-  /** Drop the cache (used after a PATCH or on identity_changed). */
+  /** Drop the cache (used on identity_changed). */
   invalidate(): void {
-    this.kickoffCache.clear();
     this.soulCache.clear();
   }
 

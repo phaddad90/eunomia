@@ -38,7 +38,12 @@ const ROLES: Record<KickoffAgent, AgentRole> = {
 const SAAS_ARCH_DIR = '/Users/peter/Desktop/Websites/prooflab/SaaS Architect';
 
 export function buildKickoffPrompt(code: AgentCode): string {
-  if (code === 'PETER') return '';
+  if (code === 'PETER') {
+    // Fallback only — the canonical PETER kickoff lives in the markdown file
+    // at SaaS Architect/PETER-kickoff.md. This stub keeps GET non-empty if
+    // someone deletes the file before the seeder runs.
+    return 'You are 🎩 PETER — the human at the centre of this fleet. See SaaS Architect/PETER-kickoff.md for your self-orientation card.';
+  }
   const role = ROLES[code as KickoffAgent];
   if (!role) return '';
   const emoji = AGENT_EMOJI[code];
@@ -159,6 +164,12 @@ function taKickoff(): string {
   ].join('\n');
 }
 
-// PETER is excluded — he is a human assignee, not a Claude session that
-// needs a kickoff prompt. Calling /api/agents/PETER/kickoff returns 400.
-export const ALLOWED_AGENT_CODES_FOR_KICKOFF: AgentCode[] = ['SA', 'AD', 'WA', 'DA', 'QA', 'WD', 'CEO', 'TA'];
+// All 9 codes have a kickoff file (PETER's is a self-orientation card for
+// the human — the only "kickoff" without an AI on the receiving end).
+export const ALLOWED_AGENT_CODES_FOR_KICKOFF: AgentCode[] = ['SA', 'AD', 'WA', 'DA', 'QA', 'WD', 'CEO', 'TA', 'PETER'];
+
+/** Canonical on-disk location for an agent's kickoff prompt. */
+export const SAAS_ARCH_KICKOFF_DIR = '/Users/peter/Desktop/Websites/prooflab/SaaS Architect';
+export function kickoffFilePath(code: AgentCode): string {
+  return `${SAAS_ARCH_KICKOFF_DIR}/${code}-kickoff.md`;
+}
