@@ -105,10 +105,12 @@ export const AGENT_EMOJI: Record<AgentCode, string> = {
   PETER: '🎩',
 };
 
-// Codes shown on the agent rail. PETER is the human assignee — appears on the
-// rail so blockers/decisions surface visually, but excluded from any auth-as-X
-// path (identity switcher, kickoff prompts, heartbeat ticker — see below).
-export const AGENT_LIST: AgentCode[] = ['SA', 'AD', 'WA', 'DA', 'QA', 'WD', 'PETER'];
+// Codes shown on the agent rail. CEO leads the list ("at top of rail" per
+// PH-089) since CEO is the orchestrator. PETER is the human assignee —
+// appears on the rail so blockers/decisions surface visually, but excluded
+// from any auth-as-X path (identity switcher, kickoff prompts, heartbeat
+// ticker — see below).
+export const AGENT_LIST: AgentCode[] = ['CEO', 'SA', 'AD', 'WA', 'DA', 'QA', 'WD', 'PETER'];
 
 // Codes a Mission Control instance can authenticate AS. Peter is human; he
 // does not call the admin API as an agent — only ever appears as assignee.
