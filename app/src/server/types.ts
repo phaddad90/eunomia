@@ -11,7 +11,7 @@ export type TicketStatus =
 
 export type TicketType = 'bug' | 'feature' | 'doc' | 'gate' | 'migration' | 'ops';
 export type TicketAudience = 'app' | 'admin';
-export type AgentCode = 'SA' | 'AD' | 'WA' | 'DA' | 'QA' | 'WD' | 'CEO' | 'TA';
+export type AgentCode = 'SA' | 'AD' | 'WA' | 'DA' | 'QA' | 'WD' | 'CEO' | 'TA' | 'PETER';
 
 export interface Ticket {
   id: string;
@@ -102,9 +102,17 @@ export const AGENT_EMOJI: Record<AgentCode, string> = {
   WD: '🌐',
   CEO: '🎯',
   TA: '🛠',
+  PETER: '🎩',
 };
 
-export const AGENT_LIST: AgentCode[] = ['SA', 'AD', 'WA', 'DA', 'QA', 'WD'];
+// Codes shown on the agent rail. PETER is the human assignee — appears on the
+// rail so blockers/decisions surface visually, but excluded from any auth-as-X
+// path (identity switcher, kickoff prompts, heartbeat ticker — see below).
+export const AGENT_LIST: AgentCode[] = ['SA', 'AD', 'WA', 'DA', 'QA', 'WD', 'PETER'];
+
+// Codes a Mission Control instance can authenticate AS. Peter is human; he
+// does not call the admin API as an agent — only ever appears as assignee.
+export const AGENTS_THAT_CAN_AUTH: AgentCode[] = ['SA', 'AD', 'WA', 'DA', 'QA', 'WD', 'CEO', 'TA'];
 
 export interface AgentPresence {
   agent_code: AgentCode;

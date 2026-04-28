@@ -11,7 +11,7 @@ import { loadLocalConfig, saveLocalConfig } from './local-config.js';
 import { PrintPepperBoardClient, BoardError } from './board-client.js';
 import { AuditPoller } from './audit-poller.js';
 import { deriveAgentStates } from './agent-state.js';
-import { AGENT_LIST } from './types.js';
+import { AGENT_LIST, AGENTS_THAT_CAN_AUTH } from './types.js';
 import { InboxStore, shouldNotifyCeo, summaryFor } from './inbox.js';
 import type { InboxEntry, NormalizedEvent } from './inbox.js';
 import { Notifier } from './notifier.js';
@@ -137,19 +137,19 @@ async function main() {
   app.use(express.static(staticDir));
 
   // Identity (used by dashboard) — current value reads through the live ref.
-  const ALLOWED_AGENT_CODES: AgentCode[] = ['SA', 'AD', 'WA', 'DA', 'QA', 'WD', 'CEO', 'TA'];
+  // Identity excludes PETER (Peter is a human assignee, not a callable agent).
   app.get('/api/me', (_req, res) => {
     res.json({
       agentCode: identity.current,
       apiBase: config.apiBase,
-      allowed: ALLOWED_AGENT_CODES,
+      allowed: AGENTS_THAT_CAN_AUTH,
     });
   });
 
   app.post('/api/me', (req, res) => {
     const next = req.body?.agentCode;
-    if (typeof next !== 'string' || !ALLOWED_AGENT_CODES.includes(next as AgentCode)) {
-      return res.status(400).json({ error: 'agentCode must be one of ' + ALLOWED_AGENT_CODES.join(', ') });
+    if (typeof next !== 'string' || !AGENTS_THAT_CAN_AUTH.includes(next as AgentCode)) {
+      return res.status(400).json({ error: 'agentCode must be one of ' + AGENTS_THAT_CAN_AUTH.join(', ') });
     }
     if (next === identity.current) return res.json({ agentCode: identity.current, changed: false });
     const prev = identity.current;
@@ -199,7 +199,7 @@ async function main() {
 
   app.post('/api/notes', async (req, res) => {
     try {
-      const { title, body, audience, type } = req.body || {};
+      const { title, body, audience, type, assignee_agent } = req.body || {};
       if (!body || typeof body !== 'string' || body.length === 0) {
         return res.status(400).json({ error: 'body required' });
       }
@@ -209,13 +209,17 @@ async function main() {
       const finalTitle = (typeof title === 'string' && title.trim())
         ? title.trim().slice(0, 180)
         : firstLine(body).slice(0, 180);
+      const ALLOWED_NOTE_ASSIGNEES: AgentCode[] = ['SA', 'AD', 'WA', 'DA', 'QA', 'WD', 'CEO', 'TA', 'PETER'];
+      const finalAssignee: AgentCode = (typeof assignee_agent === 'string' && ALLOWED_NOTE_ASSIGNEES.includes(assignee_agent as AgentCode))
+        ? assignee_agent as AgentCode
+        : 'CEO';
       const ticket = await board.createTicket({
         title: finalTitle,
         body_md: body,
         type: (type as 'ops' | 'bug' | 'feature') || 'ops',
         audience: audience === 'app' ? 'app' : 'admin',
         status: 'triage',
-        assignee_agent: 'CEO',
+        assignee_agent: finalAssignee,
       });
       events?.emitLocalTicketCreated(ticket);
       broadcast({ type: 'tickets_changed', data: { reason: 'note_created' } });

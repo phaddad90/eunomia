@@ -1,7 +1,7 @@
 // PrintPepper Mission Control — vanilla JS, no framework.
 // One brain. Many hands. No waste.
 
-const AGENT_EMOJI = { SA: '🟧', AD: '🟦', WA: '🟪', DA: '🟨', QA: '🟥', WD: '🌐', CEO: '🎯', TA: '🛠' };
+const AGENT_EMOJI = { SA: '🟧', AD: '🟦', WA: '🟪', DA: '🟨', QA: '🟥', WD: '🌐', CEO: '🎯', TA: '🛠', PETER: '🎩' };
 const COLUMNS = [
   { id: 'backlog',     label: 'Backlog' },
   { id: 'triage',      label: 'Triage' },
@@ -170,12 +170,31 @@ function renderAgents() {
   ul.innerHTML = '';
   const presenceMap = state.presence || {};
   for (const a of state.agents) {
+    const isHuman = a.code === 'PETER';
     const p = presenceMap[a.code];
     const isAlive = !!(p && p.is_alive);
     const isPaused = !!(p && p.paused);
     const pauseTitle = isPaused ? `Paused${p?.pause_reason ? ' — ' + p.pause_reason : ''}` : 'Pause agent';
     const li = document.createElement('li');
-    li.className = 'agent-card' + (isPaused ? ' paused' : '');
+    li.className = 'agent-card' + (isPaused ? ' paused' : '') + (isHuman ? ' human' : '');
+    if (isHuman) {
+      // Peter is the human assignee — no kickoff (he's not a Claude session),
+      // no pause/resume (you don't pause a human), no presence pulse (no
+      // heartbeat possible). The card surfaces blockers/decisions visually
+      // via the state light alone, derived from his ticket queue.
+      li.innerHTML = `
+        <span class="agent-emoji">${a.emoji}</span>
+        <span class="agent-code">${a.code}</span>
+        <span class="agent-meta">${a.current ? `${a.current.ticket_human_id} · ${a.current.status.replace('_',' ')}` : 'no blockers'}</span>
+        <span class="human-tag" title="Peter is a human assignee — no kickoff or pause needed">human</span>
+        <span></span>
+        <span class="presence static" title="static — Peter doesn't heartbeat"></span>
+        <span class="light" data-state="${a.light}" title="${a.light}"></span>
+      `;
+      li.addEventListener('click', () => openPeterTickets());
+      ul.appendChild(li);
+      continue;
+    }
     li.innerHTML = `
       <span class="agent-emoji">${a.emoji}</span>
       <span class="agent-code">${a.code}${isPaused ? ' <span class="pause-badge" title="' + escapeHtml(pauseTitle) + '">⏸</span>' : ''}</span>
@@ -186,7 +205,6 @@ function renderAgents() {
       <span class="light" data-state="${a.light}" title="${a.light}"></span>
     `;
     li.addEventListener('click', (e) => {
-      // Don't open soul when clicking action buttons
       if (e.target.closest('.copy-kickoff') || e.target.closest('.pause-btn')) return;
       openSoul(a.code);
     });
@@ -200,6 +218,19 @@ function renderAgents() {
     });
     ul.appendChild(li);
   }
+}
+
+// PETER doesn't have a soul.md or kickoff. Clicking his card filters the
+// kanban down to his blocker queue so Peter (or whoever's looking) sees
+// what's gating the marathon at a glance.
+function openPeterTickets() {
+  const sel = $('#filter-assignee');
+  if (sel) {
+    sel.value = 'PETER';
+    state.filters.assignee = 'PETER';
+    renderBoard();
+  }
+  toast('Filtered to PETER blockers', 'info');
 }
 
 async function togglePause(code, currentlyPaused) {
@@ -548,6 +579,7 @@ async function submitNote() {
         body: composedBody,
         audience: $('#note-audience').value,
         type: $('#note-type').value,
+        assignee_agent: $('#note-assignee')?.value || 'CEO',
       }),
     });
     if (!r.ok) {

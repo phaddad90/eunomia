@@ -19,7 +19,12 @@ interface AgentRole {
   resumeFile: string;
 }
 
-const ROLES: Record<AgentCode, AgentRole> = {
+// PETER is intentionally absent from the keyset. The kickoff endpoint
+// rejects PETER via ALLOWED_AGENT_CODES_FOR_KICKOFF below, so this map
+// can stay scoped to the agents that actually need a kickoff prompt.
+type KickoffAgent = Exclude<AgentCode, 'PETER'>;
+
+const ROLES: Record<KickoffAgent, AgentRole> = {
   SA:  { code: 'SA',  role: 'SaaS Architect',       lane: 'admin portal, billing, multi-tenant infra, platform DB', resumeFile: 'SA-resume.md' },
   AD:  { code: 'AD',  role: 'App Developer',        lane: 'tenant routes, customer-facing app, engine adjacency',    resumeFile: 'AD-resume.md' },
   WA:  { code: 'WA',  role: 'Workflow Architect',   lane: 'engine + flow editor (LOCAL only — never deploy)',         resumeFile: 'WA-resume.md' },
@@ -33,7 +38,8 @@ const ROLES: Record<AgentCode, AgentRole> = {
 const SAAS_ARCH_DIR = '/Users/peter/Desktop/Websites/prooflab/SaaS Architect';
 
 export function buildKickoffPrompt(code: AgentCode): string {
-  const role = ROLES[code];
+  if (code === 'PETER') return '';
+  const role = ROLES[code as KickoffAgent];
   if (!role) return '';
   const emoji = AGENT_EMOJI[code];
 
@@ -153,4 +159,6 @@ function taKickoff(): string {
   ].join('\n');
 }
 
+// PETER is excluded — he is a human assignee, not a Claude session that
+// needs a kickoff prompt. Calling /api/agents/PETER/kickoff returns 400.
 export const ALLOWED_AGENT_CODES_FOR_KICKOFF: AgentCode[] = ['SA', 'AD', 'WA', 'DA', 'QA', 'WD', 'CEO', 'TA'];
