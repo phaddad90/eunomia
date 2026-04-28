@@ -64,6 +64,19 @@ export interface MissionConfig {
 export type WsMessage =
   | { type: 'hello'; data: { agentCode: AgentCode; serverTime: string } }
   | { type: 'tickets_changed'; data: { reason: string } }
+  | { type: 'ticket.created'; data: { event_id: string; ticket: Ticket } }
+  | {
+      type: 'ticket.changed';
+      data: {
+        event_id: string;
+        ticket_id: string;
+        ticket_human_id: string;
+        fields_changed: string[];
+        after: Partial<Ticket>;
+      };
+    }
+  | { type: 'comment.added'; data: { event_id: string; ticket_id: string; ticket_human_id: string; comment: TicketComment } }
+  | { type: 'comment.deleted'; data: { event_id: string; ticket_id: string; comment_id: string } }
   | { type: 'audit_event'; data: AuditRow }
   | { type: 'agent_state'; data: AgentState[] }
   | { type: 'inbox_changed'; data: { unprocessed: number } }

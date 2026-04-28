@@ -21,6 +21,8 @@ const state = {
   ws: null,
   refreshTimer: null,
   selectedTicketId: null,
+  selectedTicketComments: [],
+  seenEventIds: new Set(),    // dedupe granular WS events between local-write and audit-poll paths
 };
 
 const $  = (s, root = document) => root.querySelector(s);
@@ -96,10 +98,18 @@ function connectWs() {
   ws.addEventListener('message', (e) => {
     try {
       const msg = JSON.parse(e.data);
-      if (msg.type === 'tickets_changed') { refreshBoard(); refreshOpenTicket(); }
-      else if (msg.type === 'audit_event') prependActivity(msg.data);
-      else if (msg.type === 'inbox_changed') updateInboxPill(msg.data.unprocessed);
-      else if (msg.type === 'toast') toast(msg.data.text, msg.data.kind);
+      switch (msg.type) {
+        case 'ticket.created':   if (markSeen(msg.data?.event_id)) handleTicketCreated(msg.data.ticket); break;
+        case 'ticket.changed':   if (markSeen(msg.data?.event_id)) handleTicketChanged(msg.data); break;
+        case 'comment.added':    if (markSeen(msg.data?.event_id)) handleCommentAdded(msg.data); break;
+        case 'comment.deleted':  if (markSeen(msg.data?.event_id)) handleCommentDeleted(msg.data); break;
+        case 'tickets_changed':  /* coarse fallback — only fires the full refetch if a granular handler hasn't already covered it within the last 2s */
+                                 maybeFullRefresh(msg.data?.reason); break;
+        case 'audit_event':      prependActivity(msg.data); break;
+        case 'inbox_changed':    updateInboxPill(msg.data.unprocessed); break;
+        case 'toast':            toast(msg.data.text, msg.data.kind); break;
+        default: break;
+      }
     } catch { /* ignore */ }
   });
 }
@@ -312,40 +322,44 @@ function renderReports() {
 
 async function openTicket(id) {
   state.selectedTicketId = id;
+  state.selectedTicketComments = [];
   const panel = $('#side-panel');
   panel.classList.remove('hidden');
   $('#side-body').textContent = 'Loading…';
   try {
     const r = await fetch(`/api/board/tickets/${id}`).then((r) => r.json());
     const t = r.ticket;
+    state.selectedTicketComments = r.comments || [];
     $('#side-id').textContent = t.ticket_human_id;
     $('#side-status').textContent = t.status.replace('_', ' ');
     $('#side-status').className = 'status-pill ' + t.status;
-    $('#side-body').innerHTML = renderTicketDetail(t, r.audit || [], r.comments || []);
+    $('#side-body').innerHTML = renderTicketDetail(t, r.audit || [], state.selectedTicketComments);
   } catch (err) {
     $('#side-body').textContent = 'Failed to load: ' + (err.message || err);
   }
 }
 
-// Re-fetch the open ticket (silently — keep scroll/focus, no flash) when WS
-// signals board-side activity. Dashboard already calls refreshBoard()
-// for the kanban; this keeps the side panel synced for the comms layer.
+// Re-fetch the open ticket (silently — keep scroll/focus, no flash). Used by
+// the legacy `tickets_changed` fallback path; granular events already patch
+// state in place via handleCommentAdded etc.
 async function refreshOpenTicket() {
   const id = state.selectedTicketId;
   if (!id) return;
   try {
     const r = await fetch(`/api/board/tickets/${id}`).then((r) => r.json());
     const t = r.ticket;
+    state.selectedTicketComments = r.comments || [];
     $('#side-id').textContent = t.ticket_human_id;
     $('#side-status').textContent = t.status.replace('_', ' ');
     $('#side-status').className = 'status-pill ' + t.status;
-    $('#side-body').innerHTML = renderTicketDetail(t, r.audit || [], r.comments || []);
+    $('#side-body').innerHTML = renderTicketDetail(t, r.audit || [], state.selectedTicketComments);
   } catch { /* silent */ }
 }
 
 function closeSidePanel() {
   $('#side-panel').classList.add('hidden');
   state.selectedTicketId = null;
+  state.selectedTicketComments = [];
 }
 
 function renderTicketDetail(t, audit, commentsArr) {
@@ -532,6 +546,111 @@ function toggleVoice() {
   recog.start();
   recogActive = true;
   $('#btn-voice').classList.add('btn-voice-on');
+}
+
+// ─── Granular WS handlers (PH-052) ───
+
+function markSeen(id) {
+  if (!id) return true; // no id → treat as fresh, no dedupe
+  if (state.seenEventIds.has(id)) return false;
+  state.seenEventIds.add(id);
+  if (state.seenEventIds.size > 512) {
+    // Trim oldest insertions; Set preserves insertion order
+    const overflow = state.seenEventIds.size - 512;
+    let i = 0;
+    for (const v of state.seenEventIds) { if (i++ >= overflow) break; state.seenEventIds.delete(v); }
+  }
+  return true;
+}
+
+let lastGranularAt = 0;
+function maybeFullRefresh(reason) {
+  // The legacy `tickets_changed` is a fallback. If a granular handler ran
+  // in the last 2s, we already reflect the change — skip the full refetch
+  // to avoid redundant network + reflow. Otherwise refresh the board.
+  if (Date.now() - lastGranularAt < 2000) return;
+  refreshBoard();
+  refreshOpenTicket();
+}
+
+function noteGranularApplied() { lastGranularAt = Date.now(); }
+
+function handleTicketCreated(ticket) {
+  if (!ticket || !ticket.id) return;
+  // Insert if not present, else patch in place
+  const idx = state.tickets.findIndex((t) => t.id === ticket.id);
+  if (idx >= 0) state.tickets[idx] = { ...state.tickets[idx], ...ticket };
+  else state.tickets.unshift(ticket);
+  state.agents = []; // re-derive lights via partial render? simplest: full re-render
+  renderBoard();
+  renderInbox();
+  renderStats();
+  renderBundle();
+  // Agent rail derives from the server's `deriveAgentStates`. Since we're
+  // patching client-side, do a quiet board refresh for the rail only.
+  refreshAgentsQuietly();
+  noteGranularApplied();
+}
+
+function handleTicketChanged({ ticket_id, after, fields_changed }) {
+  if (!ticket_id) return;
+  const idx = state.tickets.findIndex((t) => t.id === ticket_id);
+  if (idx < 0) {
+    // Not in our local set yet — fall back to a quiet refresh
+    refreshBoard();
+    return;
+  }
+  state.tickets[idx] = { ...state.tickets[idx], ...(after || {}) };
+  renderBoard();
+  renderInbox();
+  renderStats();
+  if (state.selectedTicketId === ticket_id) {
+    // Patch the open panel header without losing scroll
+    const t = state.tickets[idx];
+    $('#side-status').textContent = t.status.replace('_', ' ');
+    $('#side-status').className = 'status-pill ' + t.status;
+  }
+  refreshAgentsQuietly();
+  noteGranularApplied();
+}
+
+function handleCommentAdded({ ticket_id, comment }) {
+  if (!ticket_id || !comment) return;
+  if (state.selectedTicketId === ticket_id) {
+    const arr = state.selectedTicketComments || [];
+    if (!arr.find((c) => c.id === comment.id)) {
+      arr.push(comment);
+      state.selectedTicketComments = arr.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+      const t = state.tickets.find((x) => x.id === ticket_id) || { title: $('#side-id').textContent, audience: '', type: '', body_md: '', assignee_agent: null };
+      $('#side-body').innerHTML = renderTicketDetail(t, [], state.selectedTicketComments);
+    }
+  }
+  noteGranularApplied();
+}
+
+function handleCommentDeleted({ ticket_id, comment_id }) {
+  if (!ticket_id || !comment_id) return;
+  if (state.selectedTicketId === ticket_id) {
+    state.selectedTicketComments = (state.selectedTicketComments || []).filter((c) => c.id !== comment_id);
+    const t = state.tickets.find((x) => x.id === ticket_id);
+    if (t) $('#side-body').innerHTML = renderTicketDetail(t, [], state.selectedTicketComments);
+  }
+  noteGranularApplied();
+}
+
+// Lightweight rail refresh — re-derives agent lights from /api/board/tickets
+// without throwing the entire board through a re-render. Used after granular
+// state mutations so traffic lights stay accurate.
+let railTimer = null;
+function refreshAgentsQuietly() {
+  clearTimeout(railTimer);
+  railTimer = setTimeout(async () => {
+    try {
+      const r = await fetch('/api/board/tickets').then((r) => r.json());
+      state.agents = r.agents || [];
+      renderAgents();
+    } catch { /* ignore */ }
+  }, 250);
 }
 
 // ─── CEO inbox pill + modal ───

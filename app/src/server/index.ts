@@ -14,6 +14,7 @@ import { AGENT_LIST } from './types.js';
 import { InboxStore, shouldNotifyCeo, summaryFor } from './inbox.js';
 import type { InboxEntry, NormalizedEvent } from './inbox.js';
 import { Notifier } from './notifier.js';
+import { EventEmitter } from './events.js';
 import type { AgentCode, AuditRow, MissionConfig, Ticket, WsMessage } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -63,6 +64,9 @@ async function main() {
   const inbox = new InboxStore(undefined, logger);
   inbox.init();
   const notifier = new Notifier(logger);
+  // EventEmitter is bound to broadcast below; initialised after wss/clients
+  // are set up so the closure can capture them.
+  let events: EventEmitter | null = null;
 
   // Cache ticket lookups during a single tick to avoid hammering the API
   const ticketCache = new Map<string, { assignee_agent: AgentCode | null; audience: string; status: string; title: string }>();
@@ -180,6 +184,7 @@ async function main() {
         status: 'triage',
         assignee_agent: 'CEO',
       });
+      events?.emitLocalTicketCreated(ticket);
       broadcast({ type: 'tickets_changed', data: { reason: 'note_created' } });
       res.json({ ticket });
     } catch (err) {
@@ -190,13 +195,28 @@ async function main() {
   // ─── Ticket transitions ───
 
   app.post('/api/board/tickets/:id/start', async (req, res) => {
-    try { res.json(await board.start(req.params.id)); broadcast({ type: 'tickets_changed', data: { reason: 'start' } }); } catch (err) { handleErr(res, err); }
+    try {
+      const r = await board.start(req.params.id);
+      events?.emitLocalTicketChanged(req.params.id, '', { status: r.status as Ticket['status'] }, ['status']);
+      broadcast({ type: 'tickets_changed', data: { reason: 'start' } });
+      res.json(r);
+    } catch (err) { handleErr(res, err); }
   });
   app.post('/api/board/tickets/:id/handoff', async (req, res) => {
-    try { res.json(await board.handoff(req.params.id)); broadcast({ type: 'tickets_changed', data: { reason: 'handoff' } }); } catch (err) { handleErr(res, err); }
+    try {
+      const r = await board.handoff(req.params.id);
+      events?.emitLocalTicketChanged(req.params.id, '', { status: r.status as Ticket['status'] }, ['status']);
+      broadcast({ type: 'tickets_changed', data: { reason: 'handoff' } });
+      res.json(r);
+    } catch (err) { handleErr(res, err); }
   });
   app.post('/api/board/tickets/:id/done', async (req, res) => {
-    try { res.json(await board.done(req.params.id)); broadcast({ type: 'tickets_changed', data: { reason: 'done' } }); } catch (err) { handleErr(res, err); }
+    try {
+      const r = await board.done(req.params.id);
+      if (r.status) events?.emitLocalTicketChanged(req.params.id, '', { status: r.status as Ticket['status'] }, ['status']);
+      broadcast({ type: 'tickets_changed', data: { reason: 'done' } });
+      res.json(r);
+    } catch (err) { handleErr(res, err); }
   });
   app.post('/api/board/tickets/:id/comments', async (req, res) => {
     try {
@@ -204,6 +224,7 @@ async function main() {
       if (!body_md || typeof body_md !== 'string') return res.status(400).json({ error: 'body_md required' });
       if (body_md.length > 10000) return res.status(400).json({ error: 'body_md max 10000 chars' });
       const comment = await board.postComment(req.params.id, body_md);
+      events?.emitLocalCommentAdded(req.params.id, '', comment);
       broadcast({ type: 'tickets_changed', data: { reason: 'comment' } });
       res.json({ comment });
     } catch (err) { handleErr(res, err); }
@@ -213,7 +234,8 @@ async function main() {
       const allowed: Record<string, unknown> = {};
       const fields = ['status', 'assignee_agent', 'audience', 'title', 'body_md', 'type'];
       for (const f of fields) if (req.body?.[f] !== undefined) allowed[f] = req.body[f];
-      const result = await board.patch(req.params.id, allowed as Partial<import('./types.js').Ticket>);
+      const result = await board.patch(req.params.id, allowed as Partial<Ticket>);
+      events?.emitLocalTicketChanged(req.params.id, '', allowed as Partial<Ticket>, Object.keys(allowed));
       broadcast({ type: 'tickets_changed', data: { reason: 'patch' } });
       res.json(result);
     } catch (err) { handleErr(res, err); }
@@ -317,6 +339,8 @@ async function main() {
     for (const c of clients) if (c.readyState === WebSocket.OPEN) c.send(data);
   }
 
+  events = new EventEmitter(board, logger, broadcast);
+
   // ─── Audit polling ───
 
   const poller = new AuditPoller(
@@ -326,6 +350,7 @@ async function main() {
     (row) => {
       broadcast({ type: 'audit_event', data: row });
       void processForInbox(normalizeAuditRow(row));
+      void events?.emitFromAudit(row);
     },
     () => broadcast({ type: 'tickets_changed', data: { reason: 'audit' } }),
   );
