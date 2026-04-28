@@ -19,6 +19,7 @@ import { EventEmitter } from './events.js';
 import { summariseCost } from './cost.js';
 import { buildKickoffPrompt, ALLOWED_AGENT_CODES_FOR_KICKOFF } from './kickoff.js';
 import { buildPrecompactPrompt, ALLOWED_AGENT_CODES_FOR_PRECOMPACT } from './precompact.js';
+import { AgentsKbClient } from './agents-kb-client.js';
 import { PresenceHeartbeat } from './presence-heartbeat.js';
 import { PresencePoller } from './presence-poller.js';
 import type { AgentCode, AuditRow, MissionConfig, Ticket, WsMessage } from './types.js';
@@ -76,6 +77,7 @@ async function main() {
   // emitter, and webhook receiver all immediately use the new code).
   const identity = { current: config.agentCode };
   const board = new PrintPepperBoardClient(config.apiBase, config.agentToken, identity);
+  const agentsKb = new AgentsKbClient(board, logger);
   const inbox = new InboxStore(undefined, logger);
   inbox.init();
   const notifier = new Notifier(logger);
@@ -156,6 +158,7 @@ async function main() {
     const prev = identity.current;
     identity.current = next as AgentCode;
     saveLocalConfig({ agentCode: identity.current });
+    agentsKb.invalidate();
     logger.info({ prev, next: identity.current }, 'identity changed');
     broadcast({ type: 'identity_changed', data: { agentCode: identity.current, previous: prev } });
     res.json({ agentCode: identity.current, previous: prev, changed: true });
@@ -291,13 +294,19 @@ async function main() {
 
   // ─── Kickoff prompts (PH-073) ───
 
-  app.get('/api/agents/:code/kickoff', (req, res) => {
+  app.get('/api/agents/:code/kickoff', async (req, res) => {
     const code = req.params.code.toUpperCase() as AgentCode;
     if (!ALLOWED_AGENT_CODES_FOR_KICKOFF.includes(code)) {
       return res.status(400).json({ error: 'unknown agent code' });
     }
-    const prompt = buildKickoffPrompt(code);
-    res.json({ agentCode: code, prompt });
+    // PH-090: try the platform DB first (single source of truth once SA's
+    // bundle deploys), fall back to the hardcoded template so the button
+    // never breaks during the deploy gap.
+    const live = await agentsKb.getKickoff(code);
+    if (live && live.length > 0) {
+      return res.json({ agentCode: code, prompt: live, source: 'db' });
+    }
+    res.json({ agentCode: code, prompt: buildKickoffPrompt(code), source: 'hardcoded' });
   });
 
   app.get('/api/agents/:code/precompact', (req, res) => {
@@ -311,8 +320,13 @@ async function main() {
 
   // ─── Soul preview ───
 
-  app.get('/api/agents/:code/soul', (req, res) => {
-    const code = req.params.code.toUpperCase();
+  app.get('/api/agents/:code/soul', async (req, res) => {
+    const code = req.params.code.toUpperCase() as AgentCode;
+    // PH-090: try platform DB first, fall back to local soul/resume files.
+    const live = await agentsKb.getSoul(code);
+    if (live && live.length > 0) {
+      return res.type('text/markdown').set('x-source', 'db').send(live);
+    }
     const folderMap: Record<string, string> = {
       SA: 'SaaS Architect',
       AD: 'App Developer',
@@ -330,10 +344,10 @@ async function main() {
     ];
     for (const p of candidates) {
       if (existsSync(p)) {
-        return res.type('text/markdown').send(readFileSync(p, 'utf-8'));
+        return res.type('text/markdown').set('x-source', 'file').send(readFileSync(p, 'utf-8'));
       }
     }
-    res.status(404).json({ error: 'soul file not found yet (PH-036 will publish via API)' });
+    res.status(404).json({ error: 'no soul available — neither platform DB (PH-090 deploy pending) nor local file' });
   });
 
   // ─── Webhook receiver (HMAC-validated) ───

@@ -97,6 +97,16 @@ export class PrintPepperBoardClient {
     return this.req(`/api/admin/agents/${code}/resume`, { method: 'POST' });
   }
 
+  // ─── Agents KB (PH-090 endpoints; SA's bundled migration 0024) ───
+
+  async kbGetKickoff(code: AgentCode): Promise<{ kickoff_md?: string; agent?: { kickoff_md?: string }; row?: { kickoff_md?: string } }> {
+    return this.req(`/api/admin/agents/${encodeURIComponent(code)}/kickoff`);
+  }
+
+  async kbGetSoul(code: AgentCode): Promise<{ soul_md?: string; agent?: { soul_md?: string }; row?: { soul_md?: string } }> {
+    return this.req(`/api/admin/agents/${encodeURIComponent(code)}/soul`);
+  }
+
   async getQueue(assignee: AgentCode): Promise<Ticket[]> {
     const r = await this.req<{ queue: Ticket[] }>(`/api/admin/tickets/queue?assignee=${assignee}`);
     return r.queue || [];
