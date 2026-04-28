@@ -68,14 +68,31 @@ export function summariseCost(): CostSummary {
   const files: string[] = [];
 
   if (existsSync(LOG_DIR)) {
+    // Aggregate two log sources side by side per agent:
+    // - heartbeat-log-<AGENT>.jsonl   = the /loop heartbeat-check skill (PH-046; Claude Code session)
+    // - heartbeat-ticker-<AGENT>.jsonl = Mission Control's own 30s presence ticker (PH-078; node process)
+    // Both are real fires that incur tokens (skill log) or HTTPS round-trips (ticker log; near-zero token cost
+    // but counted for visibility). We charge per-fire-USD only against the skill source — the ticker doesn't
+    // run a Claude session — and surface the ticker count separately in the row.
+    type Bucket = { skill: number; skillToday: number; ticker: number; tickerToday: number; lastTs: string | null };
+    const byAgent = new Map<string, Bucket>();
+
+    const ensure = (a: string): Bucket => {
+      let b = byAgent.get(a);
+      if (!b) { b = { skill: 0, skillToday: 0, ticker: 0, tickerToday: 0, lastTs: null }; byAgent.set(a, b); }
+      return b;
+    };
+
     for (const f of readdirSync(LOG_DIR)) {
-      const m = f.match(/^heartbeat-log-([A-Z]+)\.jsonl$/);
+      const skillMatch = f.match(/^heartbeat-log-([A-Z]+)\.jsonl$/);
+      const tickerMatch = f.match(/^heartbeat-ticker-([A-Z]+)\.jsonl$/);
+      const m = skillMatch || tickerMatch;
       if (!m) continue;
       const agent = m[1];
+      const isSkill = !!skillMatch;
       const path = join(LOG_DIR, f);
       files.push(f);
-      let fires = 0, firesToday = 0;
-      let lastTs: string | null = null;
+      const bucket = ensure(agent);
       try {
         const raw = readFileSync(path, 'utf-8');
         for (const line of raw.split('\n')) {
@@ -83,22 +100,27 @@ export function summariseCost(): CostSummary {
           let parsed: AgentLine;
           try { parsed = JSON.parse(line); } catch { continue; }
           if (parsed.event === 'cap-reached') continue;
-          fires++;
+          if (isSkill) bucket.skill++; else bucket.ticker++;
           if (typeof parsed.ts === 'string') {
-            if (parsed.ts.startsWith(todayPrefix)) firesToday++;
-            if (!lastTs || parsed.ts > lastTs) lastTs = parsed.ts;
+            if (parsed.ts.startsWith(todayPrefix)) {
+              if (isSkill) bucket.skillToday++; else bucket.tickerToday++;
+            }
+            if (!bucket.lastTs || parsed.ts > bucket.lastTs) bucket.lastTs = parsed.ts;
           }
         }
       } catch { /* skip */ }
-      totalFires += fires;
-      totalFiresToday += firesToday;
+    }
+
+    for (const [agent, b] of byAgent) {
+      totalFires += b.skill;
+      totalFiresToday += b.skillToday;
       perAgent.push({
         agent,
-        fires,
-        firesToday,
-        estimatedUsd: round(fires * perFire, 4),
-        estimatedUsdToday: round(firesToday * perFire, 4),
-        lastFireAt: lastTs,
+        fires: b.skill,
+        firesToday: b.skillToday,
+        estimatedUsd: round(b.skill * perFire, 4),
+        estimatedUsdToday: round(b.skillToday * perFire, 4),
+        lastFireAt: b.lastTs,
       });
     }
   }

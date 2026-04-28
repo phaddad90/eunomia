@@ -234,15 +234,55 @@ ul { list-style: none; padding: 0; margin: 0; }
 .agent-list { display: flex; flex-direction: column; gap: 6px; }
 .agent-card {
   display: grid;
-  grid-template-columns: 22px auto 1fr auto auto;
+  grid-template-columns: 22px auto 1fr auto auto auto auto;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
   cursor: pointer;
   transition: border-color 0.12s, background 0.12s;
+}
+.agent-card.paused {
+  background: var(--surface-2);
+  opacity: 0.78;
+}
+.pause-badge {
+  display: inline-block;
+  font-size: 10px;
+  color: var(--amber);
+  margin-left: 2px;
+}
+.pause-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--text-low);
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s, border-color 0.12s;
+}
+.agent-card:hover .pause-btn { opacity: 1; }
+.pause-btn:hover { color: var(--amber); border-color: var(--border-strong); }
+.agent-card.paused .pause-btn { opacity: 1; color: var(--amber); }
+.presence {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--text-low);
+  opacity: 0.45;
+}
+.presence[data-state="on"] {
+  background: #fafafa;
+  border: 1.5px solid var(--check);
+  opacity: 1;
+  animation: presencePulse 2.4s ease-in-out infinite;
+}
+@keyframes presencePulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(22,163,74,0.45); }
+  50%     { box-shadow: 0 0 0 5px rgba(22,163,74,0); }
 }
 .agent-card:hover { border-color: var(--border-strong); background: var(--surface-2); }
 .copy-kickoff {

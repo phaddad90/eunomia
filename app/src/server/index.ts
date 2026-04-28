@@ -18,6 +18,8 @@ import { Notifier } from './notifier.js';
 import { EventEmitter } from './events.js';
 import { summariseCost } from './cost.js';
 import { buildKickoffPrompt, ALLOWED_AGENT_CODES_FOR_KICKOFF } from './kickoff.js';
+import { PresenceHeartbeat } from './presence-heartbeat.js';
+import { PresencePoller } from './presence-poller.js';
 import type { AgentCode, AuditRow, MissionConfig, Ticket, WsMessage } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -350,6 +352,36 @@ async function main() {
     });
   });
 
+  // ─── Presence (PH-078) ───
+  app.get('/api/board/presence', async (_req, res) => {
+    const cached = presencePoller.snapshot();
+    if (cached) return res.json({ presence: cached });
+    try {
+      res.json({ presence: await board.getPresence() });
+    } catch (err) {
+      // Upstream not deployed yet (PH-072 bundled-but-not-live). Degrade to
+      // an empty list with a flag so the dashboard can render "no presence
+      // data yet" rather than failing the whole boot sequence.
+      res.json({ presence: [], unavailable: true, reason: err instanceof BoardError ? `upstream ${err.status}` : 'upstream error' });
+    }
+  });
+
+  app.post('/api/board/agents/:code/pause', async (req, res) => {
+    try {
+      const code = req.params.code.toUpperCase() as AgentCode;
+      const reason = typeof req.body?.reason === 'string' ? req.body.reason.slice(0, 200) : undefined;
+      const r = await board.pauseAgent(code, reason);
+      res.json(r);
+    } catch (err) { handleErr(res, err); }
+  });
+
+  app.post('/api/board/agents/:code/resume', async (req, res) => {
+    try {
+      const code = req.params.code.toUpperCase() as AgentCode;
+      res.json(await board.resumeAgent(code));
+    } catch (err) { handleErr(res, err); }
+  });
+
   // ─── Cost telemetry (PH-069 v0.3.0) ───
   app.get('/api/cost/summary', (_req, res) => {
     res.json(summariseCost());
@@ -390,6 +422,28 @@ async function main() {
 
   // ─── Audit polling ───
 
+  // ─── Presence (PH-078) — ticker + poller ───
+  const presenceHeartbeat = new PresenceHeartbeat(
+    board,
+    () => identity.current,
+    logger,
+    (paused, reason) => {
+      logger.info({ paused, reason }, 'pause state changed (heartbeat back-channel)');
+      // Trigger an immediate presence broadcast so the dashboard reflects it.
+      // The presence poller will catch up on its own cycle anyway.
+      void presencePoller.start();
+    },
+  );
+  presenceHeartbeat.start();
+
+  const presencePoller = new PresencePoller(
+    board,
+    15_000,
+    logger,
+    (rows) => broadcast({ type: 'presence_changed', data: { presence: rows } }),
+  );
+  presencePoller.start();
+
   const poller = new AuditPoller(
     board,
     config.auditPollMs,
@@ -405,8 +459,8 @@ async function main() {
 
   // ─── Start ───
 
-  process.on('SIGINT', () => { poller.stop(); server.close(); process.exit(0); });
-  process.on('SIGTERM', () => { poller.stop(); server.close(); process.exit(0); });
+  process.on('SIGINT', () => { poller.stop(); presencePoller.stop(); presenceHeartbeat.stop(); server.close(); process.exit(0); });
+  process.on('SIGTERM', () => { poller.stop(); presencePoller.stop(); presenceHeartbeat.stop(); server.close(); process.exit(0); });
 
   server.listen(config.port, '127.0.0.1', () => {
     logger.info({ port: config.port }, `Mission Control running at http://localhost:${config.port}`);

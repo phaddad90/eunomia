@@ -1,4 +1,4 @@
-import type { AgentCode, AuditRow, Ticket, TicketAudience, TicketComment, TicketStatus, TicketType } from './types.js';
+import type { AgentCode, AgentPresence, AuditRow, Ticket, TicketAudience, TicketComment, TicketStatus, TicketType } from './types.js';
 
 export class BoardError extends Error {
   status: number;
@@ -69,6 +69,32 @@ export class PrintPepperBoardClient {
   async listComments(ticketId: string): Promise<TicketComment[]> {
     const r = await this.req<{ comments: TicketComment[] }>(`/api/admin/tickets/${encodeURIComponent(ticketId)}/comments`);
     return r.comments || [];
+  }
+
+  // ─── Presence (PH-072 endpoints; PH-078 client) ───
+
+  async heartbeat(body: { current_ticket_id?: string | null; current_ticket_human_id?: string | null; idle?: boolean; idle_since?: string | null } = {}): Promise<{ paused: boolean; pause_reason: string | null }> {
+    return this.req(`/api/admin/agents/heartbeat`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async getPresence(): Promise<AgentPresence[]> {
+    const r = await this.req<{ presence?: AgentPresence[]; rows?: AgentPresence[] }>(`/api/admin/agents/presence`);
+    // Tolerate either `presence` or `rows` keys until SA's deploy lands and the contract crystallises.
+    return r.presence || r.rows || [];
+  }
+
+  async pauseAgent(code: AgentCode, reason?: string): Promise<unknown> {
+    return this.req(`/api/admin/agents/${code}/pause`, {
+      method: 'POST',
+      body: JSON.stringify(reason ? { reason } : {}),
+    });
+  }
+
+  async resumeAgent(code: AgentCode): Promise<unknown> {
+    return this.req(`/api/admin/agents/${code}/resume`, { method: 'POST' });
   }
 
   async getQueue(assignee: AgentCode): Promise<Ticket[]> {

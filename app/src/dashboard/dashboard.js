@@ -23,6 +23,7 @@ const state = {
   selectedTicketId: null,
   selectedTicketComments: [],
   seenEventIds: new Set(),    // dedupe granular WS events between local-write and audit-poll paths
+  presence: {},                // agent_code → AgentPresence
 };
 
 const $  = (s, root = document) => root.querySelector(s);
@@ -42,6 +43,7 @@ const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
   await refreshBoard();
   await refreshInbox();
   await refreshCost();
+  await refreshPresence();
 })();
 
 // ─── UI bindings ───
@@ -117,6 +119,7 @@ function connectWs() {
         case 'inbox_changed':    updateInboxPill(msg.data.unprocessed); break;
         case 'identity_changed': handleIdentityChanged(msg.data); break;
         case 'cost_changed':     updateCostPill(msg.data); break;
+        case 'presence_changed': handlePresence(msg.data?.presence || []); break;
         case 'toast':            toast(msg.data.text, msg.data.kind); break;
         default: break;
       }
@@ -165,27 +168,76 @@ function renderAll() {
 function renderAgents() {
   const ul = $('#agent-list');
   ul.innerHTML = '';
+  const presenceMap = state.presence || {};
   for (const a of state.agents) {
+    const p = presenceMap[a.code];
+    const isAlive = !!(p && p.is_alive);
+    const isPaused = !!(p && p.paused);
+    const pauseTitle = isPaused ? `Paused${p?.pause_reason ? ' — ' + p.pause_reason : ''}` : 'Pause agent';
     const li = document.createElement('li');
-    li.className = 'agent-card';
+    li.className = 'agent-card' + (isPaused ? ' paused' : '');
     li.innerHTML = `
       <span class="agent-emoji">${a.emoji}</span>
-      <span class="agent-code">${a.code}</span>
+      <span class="agent-code">${a.code}${isPaused ? ' <span class="pause-badge" title="' + escapeHtml(pauseTitle) + '">⏸</span>' : ''}</span>
       <span class="agent-meta">${a.current ? `${a.current.ticket_human_id} · ${a.current.status.replace('_',' ')}` : 'idle'}</span>
       <button class="copy-kickoff" data-agent="${a.code}" title="Copy kickoff prompt for ${a.code}" type="button">📋</button>
+      <button class="pause-btn" data-agent="${a.code}" title="${escapeHtml(isPaused ? 'Resume agent' : pauseTitle)}" type="button">${isPaused ? '▶' : '⏸'}</button>
+      <span class="presence" data-state="${isAlive ? 'on' : 'off'}" title="${isAlive ? 'alive (heartbeat < 60s)' : 'silent'}"></span>
       <span class="light" data-state="${a.light}" title="${a.light}"></span>
     `;
     li.addEventListener('click', (e) => {
-      // Don't open soul when clicking the copy button
-      if (e.target.closest('.copy-kickoff')) return;
+      // Don't open soul when clicking action buttons
+      if (e.target.closest('.copy-kickoff') || e.target.closest('.pause-btn')) return;
       openSoul(a.code);
     });
     li.querySelector('.copy-kickoff').addEventListener('click', (e) => {
       e.stopPropagation();
       copyKickoffPrompt(a.code);
     });
+    li.querySelector('.pause-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePause(a.code, isPaused);
+    });
     ul.appendChild(li);
   }
+}
+
+async function togglePause(code, currentlyPaused) {
+  const endpoint = currentlyPaused ? 'resume' : 'pause';
+  let reason;
+  if (!currentlyPaused) {
+    reason = prompt(`Reason for pausing ${code}? (optional)`) || undefined;
+  }
+  try {
+    const r = await fetch(`/api/board/agents/${encodeURIComponent(code)}/${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(reason ? { reason } : {}),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.error || `${endpoint} ${r.status}`);
+    }
+    toast(`${code} ${endpoint}d`, 'success');
+    // Presence poller will broadcast within 15s; force immediate refresh too.
+    refreshPresence();
+  } catch (err) {
+    toast(`${endpoint} failed: ${err.message || err}`, 'error');
+  }
+}
+
+async function refreshPresence() {
+  try {
+    const r = await fetch('/api/board/presence').then((r) => r.json());
+    handlePresence(r.presence || []);
+  } catch { /* ignore — endpoint may not be live yet (PH-072 not deployed) */ }
+}
+
+function handlePresence(rows) {
+  const map = {};
+  for (const r of rows) map[r.agent_code] = r;
+  state.presence = map;
+  renderAgents();
 }
 
 async function copyKickoffPrompt(code) {

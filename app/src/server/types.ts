@@ -82,6 +82,7 @@ export type WsMessage =
   | { type: 'inbox_changed'; data: { unprocessed: number } }
   | { type: 'identity_changed'; data: { agentCode: AgentCode; previous: AgentCode } }
   | { type: 'cost_changed'; data: { todayUsd: number; thirtyDayUsd: number } }
+  | { type: 'presence_changed'; data: { presence: AgentPresence[] } }
   | { type: 'toast'; data: { kind: 'info' | 'error' | 'success'; text: string } };
 
 export interface AgentState {
@@ -104,3 +105,14 @@ export const AGENT_EMOJI: Record<AgentCode, string> = {
 };
 
 export const AGENT_LIST: AgentCode[] = ['SA', 'AD', 'WA', 'DA', 'QA', 'WD'];
+
+export interface AgentPresence {
+  agent_code: AgentCode;
+  last_seen_at: string;          // ISO timestamp; epoch (1970) for never-seen
+  current_ticket_id: string | null;
+  current_ticket_human_id: string | null;
+  idle_since: string | null;
+  paused: boolean;
+  pause_reason: string | null;
+  is_alive?: boolean;            // server-side computed (last_seen_at < 60s ago)
+}
